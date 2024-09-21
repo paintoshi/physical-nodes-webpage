@@ -1,2 +1,3 @@
 # website
-Paintoshi.dev
+
+[paintoshi.dev](https://paintoshi.dev)
