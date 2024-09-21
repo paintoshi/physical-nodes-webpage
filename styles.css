@@ -6,16 +6,20 @@ body, html {
   overflow: hidden;
   cursor: none;
 }
+
 body {
   background: linear-gradient(45deg, #4b002c, #101059, #050521);
   background-size: 100% 100%;
   color: #d9e4ed;
+  overflow: hidden;
 }
+
 #container {
   width: 100%;
   height: 100%;
   position: relative;
 }
+
 #network {
   width: 100%;
   height: 100%;
@@ -23,11 +27,13 @@ body {
   top: 0;
   left: 0;
 }
+
 canvas {
   position: absolute;
   top: 0;
   left: 0;
 }
+
 .node {
   position: absolute;
   display: flex;
@@ -41,16 +47,19 @@ canvas {
   will-change: transform;
   z-index: 500;
 }
+
 .node h2 {
   margin-block-start: 0;
   margin-block-end: 0.6em;
   font-family: 'Orbitron', sans-serif;
   color: #ffffffdd;
 }
+
 .node p {
   margin: 0;
   color: #ffffffaa;
 }
+
 #title-subtitle-container {
   position: absolute;
   top: 50%;
@@ -59,15 +68,18 @@ canvas {
   text-align: center;
   z-index: 1001;
 }
+
 #title-container {
   margin-bottom: 10px;
 }
+
 #main-title {
   font-family: 'Orbitron', sans-serif;
   user-select: none;
   margin: 0;
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
+
 #main-title-link {
   text-decoration: none;
   color: inherit;
@@ -75,22 +87,26 @@ canvas {
   pointer-events: auto;
   cursor: none;
 }
+
 #main-title-link:hover {
   cursor: none;
 }
+
 #subtitle-container {
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 #main-subtitle {
   font-family: 'Orbitron', sans-serif;
   opacity: 0.7;
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
   margin: 0;
-  margin-right: 10px;
+  margin-right: 16px;
   user-select: none;
 }
+
 #x-icon-link {
   display: inline-block;
   width: fit-content;
@@ -98,11 +114,13 @@ canvas {
   cursor: none;
   pointer-events: auto;
 }
+
 #x-icon-container {
   display: inline-block;
   width: 28px;
   height: 28px;
 }
+
 #x-icon {
   width: 100%;
   height: 100%;
@@ -115,6 +133,35 @@ canvas {
   opacity: 1;
   filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
 }
+
+#discord-icon-link {
+  display: inline-block;
+  width: fit-content;
+  height: fit-content;
+  cursor: none;
+  pointer-events: auto;
+  margin-left: 12px;
+}
+
+#discord-icon-container {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+}
+
+#discord-icon {
+  width: 100%;
+  height: 100%;
+  fill: #d9e4ed;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+#discord-icon-link:hover #discord-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+}
+
 #cursor-glow {
   position: fixed;
   width: 15px;
@@ -132,4 +179,64 @@ canvas {
 }
 #cursor-glow.hovered {
   transform: translate(-50%, -50%) scale(1.7);
+}
+
+@media (max-width: 768px) {
+  body, html {
+    overflow-y: auto;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  #container {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    padding: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow-y: visible;
+  }
+
+  #title-subtitle-container {
+    position: relative;
+    width: 100%;
+    padding: 20px 32px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  #network {
+    width: 100% !important;
+    height: auto !important;
+    padding: 32px 32px 0 32px;
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  .node {
+    position: relative;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+    pointer-events: auto !important;
+  }
+
+  #main-title {
+    font-size: 10vw !important;
+  }
+
+  #main-subtitle {
+    font-size: 5vw !important;
+  }
+
+  #x-icon-container {
+    display: inline-block;
+    width: 6vw;
+    height: 6vw;
+  }
 }
