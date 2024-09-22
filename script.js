@@ -195,6 +195,22 @@ function scaleValue(value) {
   return value * scale;
 }
 
+function applyTeamTextStyles(teamText) {
+  const fontSize = isMobile ? '10px' : `${scaleValue(10)}px`;
+  const borderWidth = isMobile ? '1px' : `${scaleValue(1)}px`;
+  const paddingValue = isMobile ? '2px 4px 2px 4px' : `${scaleValue(2)}px ${scaleValue(4)}px ${scaleValue(2)}px ${scaleValue(4)}px`;
+  const borderRadiusValue = isMobile ? '4px' : `${scaleValue(4)}px`;
+
+  teamText.style.fontSize = fontSize;
+  teamText.style.fontFamily = 'Orbitron, sans-serif';
+  teamText.style.border = `${borderWidth} solid #d9e4ed`;
+  teamText.style.padding = paddingValue;
+  teamText.style.borderRadius = borderRadiusValue;
+  teamText.style.lineHeight = '1';
+  teamText.style.color = '#d9e4ed';
+  teamText.style.display = 'inline-block';
+}
+
 function createNode(project, borderColor) {
   const node = document.createElement('div');
   node.className = 'node';
@@ -213,7 +229,7 @@ function createNode(project, borderColor) {
   const scaledHeight = isMobile ? 'auto' : `${scaleValue(project.height)}px`;
   const scaledBorder = isMobile ? '2px' : `${scaleValue(2)}px`;
   const scaledPadding = isMobile ? '12px' : `${scaleValue(12)}px`;
-  const scaledBorderRadius = isMobile ? '16px' : `${scaleValue(32)}px`;
+  const scaledBorderRadius = isMobile ? '16px' : `${scaleValue(24)}px`;
 
   node.style.width = scaledWidth;
   node.style.height = scaledHeight;
@@ -237,28 +253,29 @@ function createNode(project, borderColor) {
     // Add the team-icon div to the node
     const teamIconDiv = document.createElement('div');
     teamIconDiv.className = 'team-icon';
-
-    const imgElement = document.createElement('img');
-    imgElement.src = 'team.svg';
-    teamIconDiv.appendChild(imgElement);
-
+  
+    // Add text element instead of image
+    const teamText = document.createElement('span');
+    teamText.innerText = 'TEAM';
+  
+    // Apply styles using the helper function
+    applyTeamTextStyles(teamText);
+  
+    teamIconDiv.appendChild(teamText);
     node.appendChild(teamIconDiv);
-
+  
     // Set styles for team-icon
     teamIconDiv.style.position = 'absolute';
-
-    const iconSize = isMobile ? '20px' : `${scaleValue(24)}px`;
-    const iconPadding = isMobile ? '8px' : `${scaleValue(12)}px`;
-
-    teamIconDiv.style.width = iconSize;
-    teamIconDiv.style.height = iconSize;
-    teamIconDiv.style.top = iconPadding;
-    teamIconDiv.style.right = iconPadding;
+  
+    const iconPaddingTop = isMobile ? '6px' : `${scaleValue(10)}px`;
+    const iconPaddingRight = isMobile ? '8px' : `${scaleValue(12)}px`;
+    teamIconDiv.style.top = iconPaddingTop;
+    teamIconDiv.style.right = iconPaddingRight;
     teamIconDiv.style.pointerEvents = 'none';
-
-    // Ensure the img fills the container
-    imgElement.style.width = '100%';
-    imgElement.style.height = '100%';
+  
+    // Adjust the size of the teamIconDiv to fit the text
+    teamIconDiv.style.width = 'auto';
+    teamIconDiv.style.height = 'auto';
   }
 
   return {
@@ -444,7 +461,7 @@ function updateNodeSize(body) {
     const node = body.plugin.node;
     node.style.width = `${width}px`;
     node.style.height = `${height}px`;
-    node.style.borderRadius = `${scaleValue(32)}px`;
+    node.style.borderRadius = `${scaleValue(24)}px`;
     node.style.padding = `${scaledPadding}px`;
     node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
     
@@ -456,12 +473,17 @@ function updateNodeSize(body) {
     // Update team icon size if present
     const teamIconDiv = node.querySelector('.team-icon');
     if (teamIconDiv) {
-      const iconSize = `${scaleValue(24)}px`;
-      const iconPadding = `${scaleValue(12)}px`;
-      teamIconDiv.style.width = iconSize;
-      teamIconDiv.style.height = iconSize;
-      teamIconDiv.style.top = iconPadding;
-      teamIconDiv.style.right = iconPadding;
+      const iconPaddingTop = isMobile ? '6px' : `${scaleValue(10)}px`;
+      const iconPaddingRight = isMobile ? '8px' : `${scaleValue(12)}px`;
+      teamIconDiv.style.top = iconPaddingTop;
+      teamIconDiv.style.right = iconPaddingRight;
+      teamIconDiv.style.width = 'auto';
+      teamIconDiv.style.height = 'auto';
+
+      const teamText = teamIconDiv.querySelector('span');
+      if (teamText) {
+        applyTeamTextStyles(teamText);
+      }
     }
   }
 }
@@ -563,7 +585,7 @@ function setupMouseInteraction() {
       }
     });
 
-    canvas.addEventListener('mouseup', (event) => {
+    document.addEventListener('mouseup', (event) => {
       const mouseUpTime = Date.now();
       const clickDuration = mouseUpTime - mouseDownTime;
 
@@ -810,7 +832,7 @@ function updateDesktopLayout() {
         node.style.fontSize = `${scaleValue(16)}px`;
         node.querySelector('h2').style.fontSize = `${scaleValue(24)}px`;
         node.querySelector('p').style.fontSize = `${scaleValue(16)}px`;
-        node.style.borderRadius = `${scaleValue(32)}px`;
+        node.style.borderRadius = `${scaleValue(24)}px`;
         node.style.padding = `${scaleValue(12)}px`;
         node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
       }
@@ -1052,19 +1074,21 @@ function updateElementScaling() {
     discordIconContainer.style.height = `${discordIconSize}px`;
   }
 
-  // Update team-icon sizes
+  // Update team text
   nodes.forEach((body) => {
     if (body.plugin && body.plugin.node) {
       const node = body.plugin.node;
       const teamIconDiv = node.querySelector('.team-icon');
       if (teamIconDiv) {
-        const iconSize = isMobile ? '20px' : `${scaleValue(24)}px`;
-        const iconPadding = isMobile ? '8px' : `${scaleValue(12)}px`;
+        const iconPaddingTop = isMobile ? '6px' : `${scaleValue(10)}px`;
+        const iconPaddingRight = isMobile ? '8px' : `${scaleValue(12)}px`;
+        teamIconDiv.style.top = iconPaddingTop;
+        teamIconDiv.style.right = iconPaddingRight;
 
-        teamIconDiv.style.width = iconSize;
-        teamIconDiv.style.height = iconSize;
-        teamIconDiv.style.top = iconPadding;
-        teamIconDiv.style.right = iconPadding;
+        const teamText = teamIconDiv.querySelector('span');
+        if (teamText) {
+          applyTeamTextStyles(teamText);
+        }
       }
     }
   });
