@@ -121,8 +121,7 @@ function applyCustomGravity() {
   const baseRepulsionStrength = startRepulsionStrength * scale;
   const baseRepulsionRange = startRepulsionRange * scale;
 
-  for (let i = 0; i < nodes.length; i++) {
-    const nodeA = nodes[i];
+  nodes.forEach((nodeA, i) => {
     const directionToCenter = Vector.sub(centerPosition, nodeA.position);
     const distanceToCenter = Vector.magnitude(directionToCenter);
 
@@ -139,6 +138,7 @@ function applyCustomGravity() {
 
     for (let j = i + 1; j < nodes.length; j++) {
       const nodeB = nodes[j];
+      
       const edgeDistance = computeEdgeDistance(nodeA, nodeB);
       const repulsionRangeAB = baseRepulsionRange * ((nodeA.plugin.size + nodeB.plugin.size) / (2 * maxNodeSize));
 
@@ -154,7 +154,7 @@ function applyCustomGravity() {
         }
       }
     }
-  }
+  });
 }
 
 function reinitializePhysics() {
@@ -283,21 +283,27 @@ function createNodes() {
     const { node, width, height } = createNode(project, borderColor);
     render.element.appendChild(node);
 
-    const size = (width + height) / 2;
+    const scaledBorder = scaleValue(2);
+    const scaledPadding = scaleValue(12);
+    const totalWidth = width + 2 * (scaledBorder + scaledPadding);
+    const totalHeight = height + 2 * (scaledBorder + scaledPadding);
+
+    const size = (totalWidth + totalHeight) / 2;
     maxNodeSize = Math.max(maxNodeSize, size);
 
-    const body = Bodies.rectangle(x, y, width, height, {
+    const body = Bodies.rectangle(x, y, totalWidth, totalHeight, {
       friction: friction,
       frictionAir: frictionAir,
       restitution: restitution,
       sleepThreshold: sleepThreshold,
       inertia: Infinity,
       render: { visible: false },
-      plugin: { node, project, size, width, height }
+      plugin: { node, project, size, width: totalWidth, height: totalHeight, innerWidth: width, innerHeight: height }
     });
 
     nodes.push(body);
     World.add(world, body);
+    updateNodeSize(body);
   });
 
   nodes.forEach(node => {
@@ -400,34 +406,69 @@ function initializeLayout() {
   updateElementScaling();
 }
 
+function updateNodePosition(body) {
+  if (body.plugin && body.plugin.node) {
+    const { x, y } = body.position;
+    const { width, height } = body.plugin;
+    body.plugin.node.style.transform = `translate(${x - width / 2}px, ${y - height / 2}px)`;
+  }
+}
+
 function updateNodePositions() {
   nodes.forEach((body) => {
-    if (body.plugin && body.plugin.node) {
-      const { x, y } = body.position;
-      const { width, height } = body.plugin;
-      body.plugin.node.style.transform = `translate(${x - width / 2}px, ${y - height / 2}px)`;
+    if (!isDragging || body !== draggedBody) {
+      updateNodePosition(body);
     }
   });
   requestAnimationFrame(updateNodePositions);
 }
 
-function checkHover(event) {
-  const mousePosition = event.mouse.position;
-  let bodyUnderMouse = null;
-
-  // Check each node individually
-  for (let i = 0; i < nodes.length; i++) {
-    const body = nodes[i];
-    const { x, y } = body.position;
-    const { width, height } = body.plugin;
+function updateNodeSize(body) {
+  if (body.plugin && body.plugin.project) {
+    const { width, height } = createNode(body.plugin.project, body.plugin.node.dataset.borderColor);
+    const scaledBorder = scaleValue(2);
+    const scaledPadding = scaleValue(12);
+    const totalWidth = width + 2 * (scaledBorder + scaledPadding);
+    const totalHeight = height + 2 * (scaledBorder + scaledPadding);
     
-    // Check if the mouse is within the node's bounds
-    if (mousePosition.x >= x - width / 2 && mousePosition.x <= x + width / 2 &&
-        mousePosition.y >= y - height / 2 && mousePosition.y <= y + height / 2) {
-      bodyUnderMouse = body;
-      break;
+    // Update the body size
+    Matter.Body.scale(body, totalWidth / body.plugin.width, totalHeight / body.plugin.height);
+    
+    // Update the plugin properties
+    body.plugin.width = totalWidth;
+    body.plugin.height = totalHeight;
+    body.plugin.innerWidth = width;
+    body.plugin.innerHeight = height;
+    
+    // Update the node element styles
+    const node = body.plugin.node;
+    node.style.width = `${width}px`;
+    node.style.height = `${height}px`;
+    node.style.borderRadius = `${scaleValue(32)}px`;
+    node.style.padding = `${scaledPadding}px`;
+    node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
+    
+    // Update font sizes
+    node.style.fontSize = `${scaleValue(16)}px`;
+    node.querySelector('h2').style.fontSize = `${scaleValue(24)}px`;
+    node.querySelector('p').style.fontSize = `${scaleValue(16)}px`;
+    
+    // Update team icon size if present
+    const teamIconDiv = node.querySelector('.team-icon');
+    if (teamIconDiv) {
+      const iconSize = `${scaleValue(24)}px`;
+      const iconPadding = `${scaleValue(12)}px`;
+      teamIconDiv.style.width = iconSize;
+      teamIconDiv.style.height = iconSize;
+      teamIconDiv.style.top = iconPadding;
+      teamIconDiv.style.right = iconPadding;
     }
   }
+}
+
+function checkHover(event) {
+  const mousePosition = event.mouse.position;
+  let bodyUnderMouse = nodes.find(body => isPointInsideBody(mousePosition, body));
 
   if (bodyUnderMouse !== hoveredBody) {
     // Remove hover effect from the previous node
@@ -444,7 +485,6 @@ function checkHover(event) {
       node.style.filter = 'brightness(1.2)';
       node.style.boxShadow = `0 0 ${scaleValue(30)}px ${borderColor}`;
 
-      // Add glow to the cursor with boxShadow 0.5 opacity
       cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px ${applyOpacity(borderColor, 0.4)}`;
       cursorGlow.style.background = borderColor;
       cursorGlow.classList.add('hovered');
@@ -468,94 +508,87 @@ function handleHover(event) {
   }
 }
 
+function isPointInsideBody(point, body) {
+  const { x, y } = body.position;
+  const { width, height } = body.plugin;
+  
+  return (
+    point.x >= x - width / 2 &&
+    point.x <= x + width / 2 &&
+    point.y >= y - height / 2 &&
+    point.y <= y + height / 2
+  );
+}
+
 function setupMouseInteraction() {
   if (!isMobile) {
-    const mouse = Mouse.create(render.canvas);
-    mouseConstraint = MouseConstraint.create(engine, {
-      mouse: mouse,
-      constraint: {
-        stiffness: 0.2,
-        render: { visible: false }
-      }
-    });
+    const canvas = render.canvas;
+    let mouseDownTime = 0;
+    const clickThreshold = 200; // milliseconds
 
-    World.add(world, mouseConstraint);
-
-    Matter.Events.on(mouseConstraint, 'mousedown', (event) => {
-      clickStartPosition = { ...event.mouse.position };
-      const clickedBody = Matter.Query.point(nodes, event.mouse.position)[0];
+    canvas.addEventListener('mousedown', (event) => {
+      const mousePosition = {
+        x: event.clientX - canvas.getBoundingClientRect().left,
+        y: event.clientY - canvas.getBoundingClientRect().top
+      };
+      clickStartPosition = { ...mousePosition };
+      const clickedBody = nodes.find(body => isPointInsideBody(mousePosition, body));
       if (clickedBody) {
-        isDragging = true;
+        mouseDownTime = Date.now();
         draggedBody = clickedBody;
-        lastMousePosition = { ...event.mouse.position };
-        // Make the dragged body static to prevent physics from affecting it
-        Body.setStatic(draggedBody, true);
-        // Disable the mouseConstraint when we start dragging
-        mouseConstraint.constraint.stiffness = 0;
+        dragOffset = {
+          x: mousePosition.x - clickedBody.position.x,
+          y: mousePosition.y - clickedBody.position.y
+        };
       }
     });
 
-    Matter.Events.on(mouseConstraint, 'mousemove', (event) => {
+    document.addEventListener('mousemove', (event) => {
+      const mousePosition = {
+        x: event.clientX - canvas.getBoundingClientRect().left,
+        y: event.clientY - canvas.getBoundingClientRect().top
+      };
+      if (draggedBody && (Math.abs(mousePosition.x - clickStartPosition.x) > 5 || Math.abs(mousePosition.y - clickStartPosition.y) > 5)) {
+        isDragging = true;
+      }
       if (isDragging && draggedBody) {
-        Body.setPosition(draggedBody, event.mouse.position);
-        lastMousePosition = { ...event.mouse.position };
+        const newPosition = {
+          x: mousePosition.x - dragOffset.x,
+          y: mousePosition.y - dragOffset.y
+        };
+        Matter.Body.setPosition(draggedBody, newPosition);
+        updateNodePosition(draggedBody);
       } else {
-        handleHover(event);
+        handleHover({ mouse: { position: mousePosition } });
       }
     });
 
-    Matter.Events.on(mouseConstraint, 'mouseup', (event) => {
+    canvas.addEventListener('mouseup', (event) => {
+      const mouseUpTime = Date.now();
+      const clickDuration = mouseUpTime - mouseDownTime;
+
+      if (draggedBody && !isDragging && clickDuration < clickThreshold) {
+        // This was a click, not a drag
+        if (draggedBody.plugin && draggedBody.plugin.project) {
+          window.open(draggedBody.plugin.project.link, '_blank');
+        }
+      }
+
       if (isDragging && draggedBody) {
-        // Make the body non-static again
-        Body.setStatic(draggedBody, false);
-        // Set the velocity to zero to prevent any residual movement
         Body.setVelocity(draggedBody, { x: 0, y: 0 });
       }
-      if (!isDragging) {
-        handleClick(event);
-      }
+
       isDragging = false;
       draggedBody = null;
-      lastMousePosition = null;
-      // Re-enable the mouseConstraint
-      mouseConstraint.constraint.stiffness = 0.2;
+      dragOffset = { x: 0, y: 0 };
     });
 
-    // Use pointer events for more precise control
-    document.addEventListener('pointerdown', function(event) {
-      if (isDragging) {
-        event.preventDefault();
-      }
-    }, true);
-
-    document.addEventListener('pointermove', function(event) {
+    document.addEventListener('mouseleave', () => {
       if (isDragging && draggedBody) {
-        event.preventDefault();
-        const mousePosition = { x: event.clientX, y: event.clientY };
-        Body.setPosition(draggedBody, mousePosition);
-        lastMousePosition = { ...mousePosition };
-      }
-    }, true);
-
-    document.addEventListener('pointerup', function() {
-      if (draggedBody) {
-        Body.setStatic(draggedBody, false);
         Body.setVelocity(draggedBody, { x: 0, y: 0 });
       }
       isDragging = false;
       draggedBody = null;
-      lastMousePosition = null;
-      enableTextHoverEffects();
-    }, true);
-
-    document.addEventListener('mouseleave', function() {
-      if (draggedBody) {
-        Body.setStatic(draggedBody, false);
-        Body.setVelocity(draggedBody, { x: 0, y: 0 });
-      }
-      isDragging = false;
-      draggedBody = null;
-      lastMousePosition = null;
       if (hoveredBody && hoveredBody.plugin && hoveredBody.plugin.node) {
         const node = hoveredBody.plugin.node;
         node.style.filter = 'brightness(1)';
@@ -1269,6 +1302,9 @@ window.addEventListener('resize', () => {
   }
 
   updateElementScaling();
+
+  // Update node sizes after resize
+  nodes.forEach(updateNodeSize);
 });
 
 window.addEventListener('load', initializeLayout);
