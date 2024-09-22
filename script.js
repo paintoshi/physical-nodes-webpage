@@ -1,21 +1,21 @@
 const projectsDesktop = [
-  { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 280, height: 150 },
-  { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 160, height: 180 },
-  // { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 210, height: 110 },
-  { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 280, height: 150 },
-  { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 170, height: 170 },
-  { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130 },
-  { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120 },
+  { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 280, height: 150, team: true },
+  { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 160, height: 180, team: false },
+  // { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 210, height: 110, team: false },
+  { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 280, height: 150, team: true },
+  { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 170, height: 170, team: false },
+  { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130, team: true },
+  { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120, team: false },
 ];
 
 const projectsMobile= [
-  { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 0, height: 0 },
-  { title: 'Estfor Kingdom', description: 'A play-to-earn fantasy idle game', link: 'https://estfor.com', width: 0, height: 0 },
-  { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 0, height: 0 },
-  { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 0, height: 0 },
-  { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0 },
-  // { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 0, height: 0 },
-  { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 0, height: 0 }
+  { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 0, height: 0, team: true },
+  { title: 'Estfor Kingdom', description: 'A play-to-earn fantasy idle game', link: 'https://estfor.com', width: 0, height: 0, team: true },
+  { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0, team: false, team: true },
+  { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 0, height: 0, team: false },
+  { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 0, height: 0, team: false },
+  // { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 0, height: 0, team: false },
+  { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 0, height: 0, team: false }
 ];
 
 let Engine, Render, World, Bodies, Mouse, MouseConstraint, Body, Runner, Vector;
@@ -179,7 +179,7 @@ function transitionLayout() {
   } else {
     initializeDesktopLayout();
   }
-  updateMainTitleAndSubtitle();
+  updateElementScaling();
 }
 
 function updateLayout() {
@@ -188,7 +188,7 @@ function updateLayout() {
   } else {
     updateDesktopLayout();
   }
-  updateMainTitleAndSubtitle();
+  updateElementScaling();
 }
 
 function scaleValue(value) {
@@ -198,7 +198,14 @@ function scaleValue(value) {
 function createNode(project, borderColor) {
   const node = document.createElement('div');
   node.className = 'node';
-  node.innerHTML = `<h2>${project.title}</h2><p>${project.description}</p>`;
+
+  // Create the content div
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'node-content';
+  contentDiv.innerHTML = `<h2>${project.title}</h2><p>${project.description}</p>`;
+
+  node.appendChild(contentDiv);
+
   node.dataset.link = project.link;
 
   // Set dynamic styles
@@ -207,7 +214,7 @@ function createNode(project, borderColor) {
   const scaledBorder = isMobile ? '2px' : `${scaleValue(2)}px`;
   const scaledPadding = isMobile ? '12px' : `${scaleValue(12)}px`;
   const scaledBorderRadius = isMobile ? '16px' : `${scaleValue(32)}px`;
-  
+
   node.style.width = scaledWidth;
   node.style.height = scaledHeight;
   node.style.border = `${scaledBorder} solid ${borderColor}`;
@@ -225,6 +232,34 @@ function createNode(project, borderColor) {
   node.style.fontSize = isMobile ? '14px' : `${scaleValue(16)}px`;
   node.querySelector('h2').style.fontSize = isMobile ? '18px' : `${scaleValue(24)}px`;
   node.querySelector('p').style.fontSize = isMobile ? '14px' : `${scaleValue(16)}px`;
+
+  if (project.team) {
+    // Add the team-icon div to the node
+    const teamIconDiv = document.createElement('div');
+    teamIconDiv.className = 'team-icon';
+
+    const imgElement = document.createElement('img');
+    imgElement.src = 'team.svg';
+    teamIconDiv.appendChild(imgElement);
+
+    node.appendChild(teamIconDiv);
+
+    // Set styles for team-icon
+    teamIconDiv.style.position = 'absolute';
+
+    const iconSize = isMobile ? '20px' : `${scaleValue(24)}px`;
+    const iconPadding = isMobile ? '8px' : `${scaleValue(12)}px`;
+
+    teamIconDiv.style.width = iconSize;
+    teamIconDiv.style.height = iconSize;
+    teamIconDiv.style.top = iconPadding;
+    teamIconDiv.style.right = iconPadding;
+    teamIconDiv.style.pointerEvents = 'none';
+
+    // Ensure the img fills the container
+    imgElement.style.width = '100%';
+    imgElement.style.height = '100%';
+  }
 
   return {
     node,
@@ -362,7 +397,7 @@ function initializeLayout() {
   } else {
     setupDesktopLayout();
   }
-  updateMainTitleAndSubtitle();
+  updateElementScaling();
 }
 
 function updateNodePositions() {
@@ -961,7 +996,7 @@ function updateBodySizes() {
 }
 
 // Update main title and subtitle
-function updateMainTitleAndSubtitle() {
+function updateElementScaling() {
   const mainTitle = document.getElementById('main-title');
   const mainSubtitle = document.getElementById('main-subtitle');
   const xIconContainer = document.getElementById('x-icon-container');
@@ -983,6 +1018,23 @@ function updateMainTitleAndSubtitle() {
     discordIconContainer.style.width = `${discordIconSize}px`;
     discordIconContainer.style.height = `${discordIconSize}px`;
   }
+
+  // Update team-icon sizes
+  nodes.forEach((body) => {
+    if (body.plugin && body.plugin.node) {
+      const node = body.plugin.node;
+      const teamIconDiv = node.querySelector('.team-icon');
+      if (teamIconDiv) {
+        const iconSize = isMobile ? '20px' : `${scaleValue(24)}px`;
+        const iconPadding = isMobile ? '8px' : `${scaleValue(12)}px`;
+
+        teamIconDiv.style.width = iconSize;
+        teamIconDiv.style.height = iconSize;
+        teamIconDiv.style.top = iconPadding;
+        teamIconDiv.style.right = iconPadding;
+      }
+    }
+  });
 }
 
 function handleElementHover(event) {
@@ -1216,7 +1268,7 @@ window.addEventListener('resize', () => {
     updateDesktopLayout();
   }
 
-  updateMainTitleAndSubtitle();
+  updateElementScaling();
 });
 
 window.addEventListener('load', initializeLayout);
