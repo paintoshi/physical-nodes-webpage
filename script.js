@@ -585,7 +585,8 @@ function setupMouseInteraction() {
       }
     });
 
-    document.addEventListener('mouseup', (event) => {
+    // Handle mouseup on canvas for hyperlink clicks
+    canvas.addEventListener('mouseup', (event) => {
       const mouseUpTime = Date.now();
       const clickDuration = mouseUpTime - mouseDownTime;
 
@@ -595,7 +596,10 @@ function setupMouseInteraction() {
           window.open(draggedBody.plugin.project.link, '_blank');
         }
       }
+    });
 
+    // Handle mouseup on document for ending drags
+    document.addEventListener('mouseup', () => {
       if (isDragging && draggedBody) {
         Body.setVelocity(draggedBody, { x: 0, y: 0 });
       }
