@@ -1,20 +1,20 @@
 const projectsDesktop = [
   { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 280, height: 150 },
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 160, height: 180 },
-  { title: 'Sonic Music', description: 'Music visualizer of the Sonic network', link: 'https://music.paintoshi.dev', width: 210, height: 110 },
-  { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 280, height: 150 },
+  { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 210, height: 110 },
+  { title: 'Estfor Kingdom', description: 'A play-to-earn fantasy idle game', link: 'https://estfor.com', width: 280, height: 150 },
   { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 170, height: 170 },
-  { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130 },
+  { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130 },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120 }
 ];
 
 const projectsMobile= [
   { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 0, height: 0 },
-  { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 0, height: 0 },
+  { title: 'Estfor Kingdom', description: 'A play-to-earn fantasy idle game', link: 'https://estfor.com', width: 0, height: 0 },
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 0, height: 0 },
   { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 0, height: 0 },
-  { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0 },
-  { title: 'Sonic Music', description: 'Music visualizer of the Sonic network', link: 'https://music.paintoshi.dev', width: 0, height: 0 },
+  { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0 },
+  { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 0, height: 0 },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 0, height: 0 }
 ];
 
@@ -33,8 +33,9 @@ let resizeTimeout;
 let clickStartPosition = null;
 let isDragging = false;
 let draggedBody = null;
+let lastMousePosition = null;
 const cursorGlow = document.createElement('div');
-const baseWidth = 2200;
+const baseWidth = 1200;
 const baseHeight = 1200;
 
 function initializeMatter() {
@@ -54,6 +55,14 @@ function updateCursorGlowVisibility() {
     cursorGlow.style.display = 'block';
     document.body.style.cursor = 'none'; // Hide default cursor on desktop
   }
+}
+
+function preventTextSelection(element) {
+  element.addEventListener('touchstart', function(e) {
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+    }
+  }, { passive: false });
 }
 
 function updateMobileStatus() {
@@ -96,7 +105,7 @@ function applyOpacity(color, opacity = 0.5) {
 
 function applyCustomGravity() {
   const centerPosition = Vector.create(centerX, centerY);
-  const baseStrength = 0.3 * scale * scale;
+  const baseStrength = 0.3 * scale * scale * scale;
   const minDistance = safeZoneRadius;
   const baseRepulsionStrength = 0.2 * scale;
   const baseRepulsionRange = 100 * scale;
@@ -192,7 +201,7 @@ function createNode(project, borderColor) {
   node.style.width = scaledWidth;
   node.style.height = scaledHeight;
   node.style.border = `${scaledBorder} solid ${borderColor}`;
-  node.style.boxShadow = `0 0 ${isMobile ? '10px' : `${scaleValue(20)}px`} ${borderColor}`;
+  node.style.boxShadow = `0 0 ${isMobile ? '30px' : `${scaleValue(20)}px`} ${borderColor}`;
   node.style.borderRadius = scaledBorderRadius;
   node.style.padding = scaledPadding;
   node.dataset.borderColor = borderColor;
@@ -433,6 +442,9 @@ function setupMouseInteraction() {
       if (clickedBody) {
         isDragging = true;
         draggedBody = clickedBody;
+        lastMousePosition = { ...event.mouse.position };
+        // Make the dragged body static to prevent physics from affecting it
+        Body.setStatic(draggedBody, true);
         // Disable the mouseConstraint when we start dragging
         mouseConstraint.constraint.stiffness = 0;
       }
@@ -441,53 +453,71 @@ function setupMouseInteraction() {
     Matter.Events.on(mouseConstraint, 'mousemove', (event) => {
       if (isDragging && draggedBody) {
         Body.setPosition(draggedBody, event.mouse.position);
+        lastMousePosition = { ...event.mouse.position };
       } else {
         handleHover(event);
       }
     });
 
     Matter.Events.on(mouseConstraint, 'mouseup', (event) => {
+      if (isDragging && draggedBody) {
+        // Make the body non-static again
+        Body.setStatic(draggedBody, false);
+        // Set the velocity to zero to prevent any residual movement
+        Body.setVelocity(draggedBody, { x: 0, y: 0 });
+      }
       if (!isDragging) {
         handleClick(event);
       }
       isDragging = false;
       draggedBody = null;
+      lastMousePosition = null;
       // Re-enable the mouseConstraint
       mouseConstraint.constraint.stiffness = 0.2;
     });
 
     // Use pointer events for more precise control
-    render.canvas.style.touchAction = 'none';
-    render.canvas.style.userSelect = 'none';
-
-    render.canvas.addEventListener('pointerdown', function(event) {
+    document.addEventListener('pointerdown', function(event) {
       if (isDragging) {
         event.preventDefault();
       }
-    });
+    }, true);
 
-    render.canvas.addEventListener('pointermove', function(event) {
-      if (isDragging) {
+    document.addEventListener('pointermove', function(event) {
+      if (isDragging && draggedBody) {
         event.preventDefault();
         const mousePosition = { x: event.clientX, y: event.clientY };
         Body.setPosition(draggedBody, mousePosition);
+        lastMousePosition = { ...mousePosition };
       }
-    });
+    }, true);
 
-    render.canvas.addEventListener('pointerup', function() {
+    document.addEventListener('pointerup', function() {
+      if (draggedBody) {
+        Body.setStatic(draggedBody, false);
+        Body.setVelocity(draggedBody, { x: 0, y: 0 });
+      }
       isDragging = false;
       draggedBody = null;
-    });
+      lastMousePosition = null;
+      enableTextHoverEffects();
+    }, true);
 
-    render.canvas.addEventListener('mouseleave', function() {
+    document.addEventListener('mouseleave', function() {
+      if (draggedBody) {
+        Body.setStatic(draggedBody, false);
+        Body.setVelocity(draggedBody, { x: 0, y: 0 });
+      }
       isDragging = false;
       draggedBody = null;
+      lastMousePosition = null;
       if (hoveredBody && hoveredBody.plugin && hoveredBody.plugin.node) {
         const node = hoveredBody.plugin.node;
         node.style.filter = 'brightness(1)';
         node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
       }
       hoveredBody = null;
+      enableTextHoverEffects();
     });
   }
 }
@@ -744,10 +774,22 @@ function handleMobileTouchStart(event) {
     x: event.touches[0].clientX,
     y: event.touches[0].clientY
   };
+  const node = event.currentTarget;
+  if (node) {
+    // Apply glow effect
+    node.style.filter = 'brightness(1.2)';
+    node.style.boxShadow = `0 0 40px ${node.dataset.borderColor}`;
+  }
 }
 
 function handleMobileTouchEnd(event) {
   event.preventDefault();
+  const node = event.currentTarget;
+  if (node) {
+    // Remove glow effect
+    node.style.filter = 'brightness(1)';
+    node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
+  }
   if (touchStartPosition) {
     const touchEndPosition = {
       x: event.changedTouches[0].clientX,
@@ -769,6 +811,35 @@ function handleMobileTouchEnd(event) {
   touchStartPosition = null;
 }
 
+function handleMobileTouchCancel(event) {
+  const node = event.currentTarget;
+  if (node) {
+    // Remove glow effect
+    node.style.filter = 'brightness(1)';
+    node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
+  }
+  touchStartPosition = null;
+}
+
+function handleMobileTouchMove(event) {
+  const node = event.currentTarget;
+  if (node) {
+    const touch = event.touches[0];
+    const touchX = touch.clientX;
+    const touchY = touch.clientY;
+    const rect = node.getBoundingClientRect();
+    if (touchX < rect.left || touchX > rect.right || touchY < rect.top || touchY > rect.bottom) {
+      // Touch moved outside the node, remove glow effect
+      node.style.filter = 'brightness(1)';
+      node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
+    } else {
+      // Touch is still within the node, ensure the glow effect is applied
+      node.style.filter = 'brightness(1.2)';
+      node.style.boxShadow = `0 0 40px ${node.dataset.borderColor}`;
+    }
+  }
+}
+
 function updateMobileLayout() {
   const network = document.getElementById('network');
   network.innerHTML = ''; // Clear existing nodes
@@ -787,6 +858,7 @@ function updateMobileLayout() {
     node.style.width = 'calc(100% - 64px)';
     node.style.height = 'auto';
     node.style.marginBottom = '48px';
+    node.style.padding = '32px 8px';
     node.style.transform = 'none';
     node.style.fontSize = '14px'; // Base font size for mobile
     node.style.pointerEvents = 'auto'; // To enable touch events on mobile
@@ -798,8 +870,10 @@ function updateMobileLayout() {
     description.style.fontSize = '14px';
 
     // Add touch event listeners for mobile
-    node.addEventListener('touchstart', handleMobileTouchStart);
-    node.addEventListener('touchend', handleMobileTouchEnd);
+    node.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
+    node.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
+    node.addEventListener('touchcancel', handleMobileTouchCancel, { passive: true });
+    node.addEventListener('touchmove', handleMobileTouchMove, { passive: true });
   });
 
   // Adjust container and title styles for mobile
@@ -843,8 +917,6 @@ function computeEdgeDistance(nodeA, nodeB) {
   return Math.sqrt(edgeDistanceX * edgeDistanceX + edgeDistanceY * edgeDistanceY);
 }
 
-const colors = getDistinctColors(projects.length);
-
 function updateBodySizes() {
   nodes.forEach((body) => {
     if (body.plugin && body.plugin.project) {
@@ -878,6 +950,93 @@ function updateBodySizes() {
   });
 }
 
+// Update main title and subtitle
+function updateMainTitleAndSubtitle() {
+  const mainTitle = document.getElementById('main-title');
+  const mainSubtitle = document.getElementById('main-subtitle');
+  const xIconContainer = document.getElementById('x-icon-container');
+  const discordIconContainer = document.getElementById('discord-icon-container');
+
+  mainTitle.style.fontSize = `${scaleValue(48)}px`;
+  mainSubtitle.style.fontSize = `${scaleValue(16)}px`;
+
+  // Scale the X icon
+  if (!isMobile) {
+    const xIconSize = scaleValue(28);
+    xIconContainer.style.width = `${xIconSize}px`;
+    xIconContainer.style.height = `${xIconSize}px`;
+  }
+
+  // Scale the Discord icon
+  if (!isMobile) {
+    const discordIconSize = scaleValue(28);
+    discordIconContainer.style.width = `${discordIconSize}px`;
+    discordIconContainer.style.height = `${discordIconSize}px`;
+  }
+}
+
+function handleElementHover(event) {
+  if (!isDragging) {
+    cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(38, 139, 217, 0.4)`;
+    cursorGlow.style.background = 'rgba(38, 139, 217, 1)';
+    cursorGlow.classList.add('hovered');
+
+    if (event.target.id === 'main-title-link') {
+      const mainTitle = document.getElementById('main-title');
+      mainTitle.style.filter = 'brightness(1.2)';
+      mainTitle.style.textShadow = `0 0 ${scaleValue(30)}px rgba(255, 255, 255, 0.8)`;
+    } else {
+      const icon = event.target.querySelector('svg');
+      if (icon) {
+        icon.style.filter = `drop-shadow(0 0 ${scaleValue(5)}px rgba(255, 255, 255, 0.8))`;
+      }
+    }
+  }
+}
+
+function disableTextHoverEffects() {
+  const mainTitle = document.getElementById('main-title');
+  const mainSubtitle = document.getElementById('main-subtitle');
+  const xIcon = document.getElementById('x-icon');
+  const discordIcon = document.getElementById('discord-icon');
+
+  mainTitle.style.pointerEvents = 'none';
+  mainSubtitle.style.pointerEvents = 'none';
+  xIcon.style.pointerEvents = 'none';
+  discordIcon.style.pointerEvents = 'none';
+
+  cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`;
+  cursorGlow.style.background = 'rgba(255, 255, 255, 1)';
+  cursorGlow.classList.remove('hovered');
+}
+
+// New function to enable text hover effects
+function enableTextHoverEffects() {
+  const mainTitle = document.getElementById('main-title');
+  const mainSubtitle = document.getElementById('main-subtitle');
+  const xIcon = document.getElementById('x-icon');
+  const discordIcon = document.getElementById('discord-icon');
+
+  mainTitle.style.pointerEvents = 'auto';
+  mainSubtitle.style.pointerEvents = 'auto';
+  xIcon.style.pointerEvents = 'auto';
+  discordIcon.style.pointerEvents = 'auto';
+}
+
+function handleElementLeave() {
+  cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`;
+  cursorGlow.style.background = 'rgba(255, 255, 255, 1)';
+  cursorGlow.classList.remove('hovered');
+
+  const mainTitle = document.getElementById('main-title');
+  mainTitle.style.filter = '';
+  mainTitle.style.textShadow = '';
+
+  const icons = document.querySelectorAll('#x-icon, #discord-icon');
+  icons.forEach(icon => icon.style.filter = '');
+}
+
+const colors = getDistinctColors(projects.length);
 if (isMobile) {
   const network = document.getElementById('network');
   projects.forEach((project, index) => {
@@ -990,64 +1149,6 @@ if (isMobile) {
   });
 }
 
-// Update main title and subtitle
-function updateMainTitleAndSubtitle() {
-  const mainTitle = document.getElementById('main-title');
-  const mainSubtitle = document.getElementById('main-subtitle');
-  const xIconContainer = document.getElementById('x-icon-container');
-  const discordIconContainer = document.getElementById('discord-icon-container');
-
-  mainTitle.style.fontSize = `${scaleValue(48)}px`;
-  mainSubtitle.style.fontSize = `${scaleValue(16)}px`;
-
-  // Scale the X icon
-  if (!isMobile) {
-    const xIconSize = scaleValue(28);
-    xIconContainer.style.width = `${xIconSize}px`;
-    xIconContainer.style.height = `${xIconSize}px`;
-  }
-
-  // Scale the Discord icon
-  if (!isMobile) {
-    const discordIconSize = scaleValue(28);
-    discordIconContainer.style.width = `${discordIconSize}px`;
-    discordIconContainer.style.height = `${discordIconSize}px`;
-  }
-}
-
-function handleElementHover(event) {
-  if (!isDragging) {
-    cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(38, 139, 217, 0.4)`;
-    cursorGlow.style.background = 'rgba(38, 139, 217, 1)';
-    cursorGlow.classList.add('hovered');
-
-    if (event.target.id === 'main-title-link') {
-      const mainTitle = document.getElementById('main-title');
-      mainTitle.style.filter = 'brightness(1.2)';
-      mainTitle.style.textShadow = `0 0 ${scaleValue(30)}px rgba(255, 255, 255, 0.8)`;
-    } else {
-      const icon = event.target.querySelector('svg');
-      if (icon) {
-        icon.style.filter = `drop-shadow(0 0 ${scaleValue(5)}px rgba(255, 255, 255, 0.8))`;
-      }
-    }
-  }
-}
-
-function handleElementLeave() {
-  cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`;
-  cursorGlow.style.background = 'rgba(255, 255, 255, 1)';
-  cursorGlow.classList.remove('hovered');
-
-  const mainTitle = document.getElementById('main-title');
-  mainTitle.style.filter = '';
-  mainTitle.style.textShadow = '';
-
-  const icons = document.querySelectorAll('#x-icon, #discord-icon');
-  icons.forEach(icon => icon.style.filter = '');
-}
-
-// Add event listeners to the main title link
 const mainTitleLink = document.getElementById('main-title-link');
 const xIconLink = document.getElementById('x-icon-link');
 const discordIconLink = document.getElementById('discord-icon-link');
@@ -1071,7 +1172,28 @@ document.addEventListener('mousemove', function(event) {
   
   if (isDragging && draggedBody) {
     Body.setPosition(draggedBody, mousePosition);
+    lastMousePosition = { ...mousePosition };
+    disableTextHoverEffects();
+  } else {
+    enableTextHoverEffects();
   }
+});
+
+// Prevent long press from triggering text selection
+document.addEventListener('contextmenu', function(e) {
+  if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Apply preventTextSelection to specific elements that shouldn't be selectable
+document.querySelectorAll('.node, #main-subtitle').forEach(preventTextSelection);
+
+// Ensure links work properly
+document.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
 });
 
 // Initial setup
