@@ -54,7 +54,7 @@ canvas {
   transition: filter 0.2s ease, box-shadow 0.2s ease;
   pointer-events: none;
   will-change: transform;
-  z-index: 500;
+  z-index: 1002;
 }
 
 .node h2 {

@@ -1,11 +1,11 @@
 const projectsDesktop = [
   { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 280, height: 150 },
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 160, height: 180 },
-  { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 210, height: 110 },
-  { title: 'Estfor Kingdom', description: 'A play-to-earn fantasy idle game', link: 'https://estfor.com', width: 280, height: 150 },
+  // { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 210, height: 110 },
+  { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 280, height: 150 },
   { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 170, height: 170 },
-  { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130 },
-  { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120 }
+  { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130 },
+  { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120 },
 ];
 
 const projectsMobile= [
@@ -14,7 +14,7 @@ const projectsMobile= [
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 0, height: 0 },
   { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 0, height: 0 },
   { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0 },
-  { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 0, height: 0 },
+  // { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 0, height: 0 },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 0, height: 0 }
 ];
 
@@ -35,8 +35,19 @@ let isDragging = false;
 let draggedBody = null;
 let lastMousePosition = null;
 const cursorGlow = document.createElement('div');
+
+// Custom parameters
 const baseWidth = 1200;
 const baseHeight = 1200;
+const friction = 0.2;
+const frictionAir = 0.5;
+const restitution = 0.8;
+const sleepThreshold = 15;
+const sleepTolerance = 0.1;
+const startBaseStrength = 0.3;
+const startRepulsionStrength = 0.2;
+const startRepulsionRange = 100;
+const minForceThreshold = 0.01;
 
 function initializeMatter() {
   ({ Engine, Render, World, Bodies, Mouse, MouseConstraint, Body, Runner, Vector } = Matter);
@@ -105,11 +116,10 @@ function applyOpacity(color, opacity = 0.5) {
 
 function applyCustomGravity() {
   const centerPosition = Vector.create(centerX, centerY);
-  const baseStrength = 0.3 * scale * scale * scale;
+  const baseStrength = startBaseStrength * scale * scale * scale;
   const minDistance = safeZoneRadius;
-  const baseRepulsionStrength = 0.2 * scale;
-  const baseRepulsionRange = 100 * scale;
-  const MIN_FORCE_THRESHOLD = 0.001;
+  const baseRepulsionStrength = startRepulsionStrength * scale;
+  const baseRepulsionRange = startRepulsionRange * scale;
 
   for (let i = 0; i < nodes.length; i++) {
     const nodeA = nodes[i];
@@ -119,7 +129,7 @@ function applyCustomGravity() {
     if (distanceToCenter > minDistance) {
       const normalizedDirection = Vector.normalise(directionToCenter);
       const strength = baseStrength * (1 - Math.min(1, minDistance / distanceToCenter));
-      if (strength > MIN_FORCE_THRESHOLD) {
+      if (strength > minForceThreshold) {
         Body.applyForce(nodeA, nodeA.position, Vector.mult(normalizedDirection, strength));
       }
     } else {
@@ -137,7 +147,7 @@ function applyCustomGravity() {
         const normalizedDirection = Vector.normalise(directionBetweenNodes);
         const strength = baseRepulsionStrength * (1 - edgeDistance / repulsionRangeAB);
 
-        if (strength > MIN_FORCE_THRESHOLD) {
+        if (strength > minForceThreshold) {
           const repulsionForce = Vector.mult(normalizedDirection, -strength);
           Body.applyForce(nodeA, nodeA.position, repulsionForce);
           Body.applyForce(nodeB, nodeB.position, Vector.neg(repulsionForce));
@@ -154,7 +164,7 @@ function reinitializePhysics() {
   engine = Engine.create({
     enableSleeping: true,
     gravity: { x: 0, y: 0 },
-    sleepTolerance: 0.1,
+    sleepTolerance: sleepTolerance,
     timing: { timeScale: 1 }
   });
   world = engine.world;
@@ -242,10 +252,10 @@ function createNodes() {
     maxNodeSize = Math.max(maxNodeSize, size);
 
     const body = Bodies.rectangle(x, y, width, height, {
-      friction: 0.2,
-      frictionAir: 0.5,
-      restitution: 0.8,
-      sleepThreshold: 15,
+      friction: friction,
+      frictionAir: frictionAir,
+      restitution: restitution,
+      sleepThreshold: sleepThreshold,
       inertia: Infinity,
       render: { visible: false },
       plugin: { node, project, size, width, height }
@@ -659,10 +669,10 @@ function initializeDesktopLayout() {
     maxNodeSize = Math.max(maxNodeSize, size);
 
     const body = Bodies.rectangle(x, y, width, height, {
-      friction: 0.2,
-      frictionAir: 0.5,
-      restitution: 0.8,
-      sleepThreshold: 15,
+      friction: friction,
+      frictionAir: frictionAir,
+      restitution: restitution,
+      sleepThreshold: sleepThreshold,
       inertia: Infinity,
       render: { visible: false },
       plugin: { node, project, size, width, height }
@@ -1131,22 +1141,12 @@ if (isMobile) {
       node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
     }
     hoveredBody = null;
-  
-    // Reset cursor to default when mouse leaves the canvas
-    // render.canvas.style.cursor = 'default';
   });
 
   Render.run(render);
   Runner.run(Runner.create(), engine);
 
   updateNodePositions();
-
-  nodes.forEach(node => {
-    Body.setVelocity(node, {
-      x: (Math.random() - 0.8) * 25,
-      y: (Math.random() - 0.8) * 10
-    });
-  });
 }
 
 const mainTitleLink = document.getElementById('main-title-link');
