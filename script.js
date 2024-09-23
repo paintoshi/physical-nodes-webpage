@@ -266,12 +266,12 @@ function applyCustomGravity() {
   // Recalculate centerX and centerY based on the current render dimensions
   centerX = render.options.width / 2;
   centerY = render.options.height / 2;
-  centerRadius = scaleValue(150);
-  safeZoneRadius = centerRadius + scaleValue(250);
+  centerRadius = scaleValue(200);
+  safeZoneRadiusX = centerRadius + scaleValue(250);
+  safeZoneRadiusY = safeZoneRadiusX * 0.6; // Height is 60% of the width
 
   const centerPosition = Vector.create(centerX, centerY);
   const baseStrength = startBaseStrength * Math.pow(scale, 4);
-  const minDistance = safeZoneRadius;
   const baseRepulsionStrength = startRepulsionStrength * scale;
   const baseRepulsionRange = startRepulsionRange * scale;
 
@@ -279,9 +279,14 @@ function applyCustomGravity() {
     const directionToCenter = Vector.sub(centerPosition, nodeA.position);
     const distanceToCenter = Vector.magnitude(directionToCenter);
 
-    if (distanceToCenter > minDistance) {
+    // Calculate the normalized distance to the ellipse edge
+    const normalizedX = directionToCenter.x / safeZoneRadiusX;
+    const normalizedY = directionToCenter.y / safeZoneRadiusY;
+    const normalizedDistance = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
+
+    if (normalizedDistance > 1) {
       const normalizedDirection = Vector.normalise(directionToCenter);
-      const strength = baseStrength * (1 - Math.min(1, minDistance / distanceToCenter));
+      const strength = baseStrength * (1 - Math.min(1, 1 / normalizedDistance));
       if (strength > minForceThreshold) {
         Body.applyForce(nodeA, nodeA.position, Vector.mult(normalizedDirection, strength));
       }
