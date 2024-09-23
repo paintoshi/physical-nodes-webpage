@@ -34,6 +34,7 @@ let clickStartPosition = null;
 let isDragging = false;
 let draggedBody = null;
 let lastMousePosition = null;
+let applyCustomGravityHandler = null;
 const cursorGlow = document.createElement('div');
 
 // Custom parameters
@@ -48,6 +49,153 @@ const startBaseStrength = 0.3;
 const startRepulsionStrength = 0.2;
 const startRepulsionRange = 100;
 const minForceThreshold = 0.01;
+
+const styleConfig = {
+  mobile: {
+    node: {
+      width: 'calc(100% - 32px)',
+      height: 'auto',
+      fontSize: '14px',
+      h2FontSize: '18px',
+      pFontSize: '14px',
+      borderSize: '2px',
+      borderRadius: '16px',
+      paddingSize: '12px',
+      boxShadowSize: '30px'
+    },
+    teamText: {
+      fontSize: '10px',
+      borderWidth: '1px',
+      padding: '2px 4px',
+      borderRadius: '4px'
+    },
+    teamIcon: {
+      top: '6px',
+      right: '8px'
+    },
+    mainTitleFontSize: '32px',
+    mainSubtitleFontSize: '18px',
+    iconSize: '24px',
+    touchActiveBoxShadowSize: '40px',
+    networkPadding: '20px 32px',
+    nodeMarginBottom: '48px',
+    titleSubtitleContainerPadding: '20px 16px',
+    titleSubtitleContainerMarginBottom: '20px',
+  },
+  desktop: {
+    node: {
+      width: project => `${scaleValue(project.width)}px`,
+      height: project => `${scaleValue(project.height)}px`,
+      fontSize: `${scaleValue(16)}px`,
+      h2FontSize: `${scaleValue(24)}px`,
+      pFontSize: `${scaleValue(16)}px`,
+      borderSize: `${scaleValue(2)}px`,
+      borderRadius: `${scaleValue(24)}px`,
+      paddingSize: `${scaleValue(12)}px`,
+      boxShadowSize: `${scaleValue(20)}px`
+    },
+    teamText: {
+      fontSize: `${scaleValue(10)}px`,
+      borderWidth: `${scaleValue(1)}px`,
+      padding: `${scaleValue(2)}px ${scaleValue(4)}px`,
+      borderRadius: `${scaleValue(4)}px`
+    },
+    teamIcon: {
+      top: `${scaleValue(10)}px`,
+      right: `${scaleValue(12)}px`
+    },
+    mainTitleFontSize: () => `${scaleValue(48)}px`,
+    mainSubtitleFontSize: () => `${scaleValue(16)}px`,
+    iconSize: () => `${scaleValue(28)}px`,
+    containerStyles: {
+      height: '100%',
+      overflow: 'hidden'
+    },
+    titleSubtitleContainerStyles: {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      padding: '0'
+    },
+    networkStyles: {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      padding: '0'
+    },
+    hoverBoxShadowSize: () => `${scaleValue(30)}px`,
+    defaultBoxShadowSize: () => `${scaleValue(20)}px`,
+    iconDropShadowSize: () => `${scaleValue(5)}px`,
+  },
+  cursorGlow: {
+    defaultBoxShadow: (scale) => `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`,
+    hoveredBoxShadow: (color, scale) => `0 0 ${scaleValue(30)}px ${scaleValue(15)}px ${applyOpacity(color, 0.4)}`,
+    defaultBackground: 'rgba(255, 255, 255, 1)'
+  },
+  elementHover: {
+    brightness: 'brightness(1.2)',
+    textShadow: (scale) => `0 0 ${scaleValue(30)}px rgba(255, 255, 255, 0.8)`
+  }
+};
+
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+function getNodeStyles(project, borderColor) {
+  const config = isMobile ? styleConfig.mobile.node : styleConfig.desktop.node;
+  return {
+    width: isMobile ? config.width : config.width(project),
+    height: isMobile ? config.height : config.height(project),
+    fontSize: config.fontSize,
+    border: `${config.borderSize} solid ${borderColor}`,
+    boxShadow: `0 0 ${config.boxShadowSize} ${borderColor}`,
+    borderRadius: config.borderRadius,
+    padding: config.paddingSize,
+    backgroundColor: darkenColor(borderColor, 40),
+    opacity: '0.9'
+  };
+}
+
+function applyTeamTextStyles(teamText) {
+  const config = isMobile ? styleConfig.mobile.teamText : styleConfig.desktop.teamText;
+  Object.assign(teamText.style, {
+    fontSize: config.fontSize,
+    fontFamily: 'Orbitron, sans-serif',
+    border: `${config.borderWidth} solid #d9e4ed`,
+    padding: config.padding,
+    borderRadius: config.borderRadius,
+    lineHeight: '1',
+    color: '#d9e4ed',
+    display: 'inline-block'
+  });
+}
+
+function getTeamIconStyles() {
+  const config = isMobile ? styleConfig.mobile.teamIcon : styleConfig.desktop.teamIcon;
+  return {
+    position: 'absolute',
+    top: config.top,
+    right: config.right,
+    pointerEvents: 'none',
+    width: 'auto',
+    height: 'auto'
+  };
+}
+
+function applyNodeTouchEffect(node, isActive) {
+  const boxShadowSize = isActive
+    ? styleConfig.mobile.touchActiveBoxShadowSize
+    : styleConfig.mobile.node.boxShadowSize;
+  node.style.filter = isActive ? 'brightness(1.2)' : 'brightness(1)';
+  node.style.boxShadow = `0 0 ${boxShadowSize} ${node.dataset.borderColor}`;
+}
 
 function initializeMatter() {
   ({ Engine, Render, World, Bodies, Mouse, MouseConstraint, Body, Runner, Vector } = Matter);
@@ -115,8 +263,14 @@ function applyOpacity(color, opacity = 0.5) {
 }
 
 function applyCustomGravity() {
+  // Recalculate centerX and centerY based on the current render dimensions
+  centerX = render.options.width / 2;
+  centerY = render.options.height / 2;
+  centerRadius = scaleValue(150);
+  safeZoneRadius = centerRadius + scaleValue(250);
+
   const centerPosition = Vector.create(centerX, centerY);
-  const baseStrength = startBaseStrength * scale * scale * scale;
+  const baseStrength = startBaseStrength * Math.pow(scale, 4);
   const minDistance = safeZoneRadius;
   const baseRepulsionStrength = startRepulsionStrength * scale;
   const baseRepulsionRange = startRepulsionRange * scale;
@@ -198,82 +352,71 @@ function applyTeamTextStyles(teamText) {
 function createNode(project, borderColor) {
   const node = document.createElement('div');
   node.className = 'node';
-
+  
   // Create the content div
   const contentDiv = document.createElement('div');
   contentDiv.className = 'node-content';
   contentDiv.innerHTML = `<h2>${project.title}</h2><p>${project.description}</p>`;
-
   node.appendChild(contentDiv);
 
+  // Append node to the DOM to get accurate measurements
+  document.body.appendChild(node);
+
+  // Compute scaled dimensions
+  const scaledWidth = isMobile ? (window.innerWidth - 64) : scaleValue(project.width);
+  node.style.width = isMobile ? `calc(100% - 64px)` : `${scaledWidth}px`;
+
+  // Allow the browser to render the node and compute height
+  let scaledHeight;
+  if (isMobile) {
+    scaledHeight = node.getBoundingClientRect().height;
+  } else {
+    scaledHeight = scaleValue(project.height);
+    node.style.height = `${scaledHeight}px`;
+  }
+
+  // Remove node from the DOM and re-append it later
+  document.body.removeChild(node);
   node.dataset.link = project.link;
-
-  // Set dynamic styles
-  const scaledWidth = isMobile ? 'calc(100% - 32px)' : `${scaleValue(project.width)}px`;
-  const scaledHeight = isMobile ? 'auto' : `${scaleValue(project.height)}px`;
-  const scaledBorder = isMobile ? '2px' : `${scaleValue(2)}px`;
-  const scaledPadding = isMobile ? '12px' : `${scaleValue(12)}px`;
-  const scaledBorderRadius = isMobile ? '16px' : `${scaleValue(24)}px`;
-
-  node.style.width = scaledWidth;
-  node.style.height = scaledHeight;
-  node.style.border = `${scaledBorder} solid ${borderColor}`;
-  node.style.boxShadow = `0 0 ${isMobile ? '30px' : `${scaleValue(20)}px`} ${borderColor}`;
-  node.style.borderRadius = scaledBorderRadius;
-  node.style.padding = scaledPadding;
   node.dataset.borderColor = borderColor;
 
-  // Generate a darker background color
-  const darkBackgroundColor = darkenColor(borderColor, 40);
-  node.style.backgroundColor = darkBackgroundColor;
-  node.style.opacity = '0.9';
+  // Apply node styles
+  Object.assign(node.style, getNodeStyles(project, borderColor));
 
-  // Scale font sizes
-  node.style.fontSize = isMobile ? '14px' : `${scaleValue(16)}px`;
-  node.querySelector('h2').style.fontSize = isMobile ? '18px' : `${scaleValue(24)}px`;
-  node.querySelector('p').style.fontSize = isMobile ? '14px' : `${scaleValue(16)}px`;
+  // Set font sizes for h2 and p
+  const h2 = node.querySelector('h2');
+  const p = node.querySelector('p');
+  const config = isMobile ? styleConfig.mobile.node : styleConfig.desktop.node;
+  h2.style.fontSize = config.h2FontSize;
+  p.style.fontSize = config.pFontSize;
 
   if (project.team) {
-    // Add the team-icon div to the node
     const teamIconDiv = document.createElement('div');
     teamIconDiv.className = 'team-icon';
-  
-    // Add text element instead of image
+
     const teamText = document.createElement('span');
     teamText.innerText = 'TEAM';
-  
-    // Apply styles using the helper function
+
     applyTeamTextStyles(teamText);
-  
+
     teamIconDiv.appendChild(teamText);
     node.appendChild(teamIconDiv);
-  
-    // Set styles for team-icon
-    teamIconDiv.style.position = 'absolute';
-  
-    const iconPaddingTop = isMobile ? '6px' : `${scaleValue(10)}px`;
-    const iconPaddingRight = isMobile ? '8px' : `${scaleValue(12)}px`;
-    teamIconDiv.style.top = iconPaddingTop;
-    teamIconDiv.style.right = iconPaddingRight;
-    teamIconDiv.style.pointerEvents = 'none';
-  
-    // Adjust the size of the teamIconDiv to fit the text
-    teamIconDiv.style.width = 'auto';
-    teamIconDiv.style.height = 'auto';
+
+    // Apply team icon styles
+    Object.assign(teamIconDiv.style, getTeamIconStyles());
   }
 
   return {
     node,
-    width: isMobile ? 'calc(100% - 32px)' : scaleValue(project.width),
-    height: isMobile ? 'auto' : scaleValue(project.height),
-    innerWidth: isMobile ? 'calc(100% - 32px)' : scaleValue(project.width),
-    innerHeight: isMobile ? 'auto' : scaleValue(project.height)
+    width: isMobile ? styleConfig.mobile.node.width : scaleValue(project.width),
+    height: isMobile ? styleConfig.mobile.node.height : scaleValue(project.height),
+    innerWidth: isMobile ? styleConfig.mobile.node.width : scaleValue(project.width),
+    innerHeight: isMobile ? styleConfig.mobile.node.height : scaleValue(project.height)
   };
 }
 
 function createNodes() {
   nodes = [];
-  maxNodeSize = 0;
 
   projects.forEach((project, index) => {
     const angle = (index / projects.length) * Math.PI * 2;
@@ -284,22 +427,14 @@ function createNodes() {
     const { node, width, height } = createNode(project, borderColor);
     render.element.appendChild(node);
 
-    const scaledBorder = scaleValue(2);
-    const scaledPadding = scaleValue(12);
-    const totalWidth = width + 2 * (scaledBorder + scaledPadding);
-    const totalHeight = height + 2 * (scaledBorder + scaledPadding);
-
-    const size = (totalWidth + totalHeight) / 2;
-    maxNodeSize = Math.max(maxNodeSize, size);
-
-    const body = Bodies.rectangle(x, y, totalWidth, totalHeight, {
+    const body = Bodies.rectangle(x, y, width, height, {
       friction: friction,
       frictionAir: frictionAir,
       restitution: restitution,
       sleepThreshold: sleepThreshold,
       inertia: Infinity,
       render: { visible: false },
-      plugin: { node, project, size, width: totalWidth, height: totalHeight, innerWidth: width, innerHeight: height }
+      plugin: { node, project, width, height }
     });
 
     nodes.push(body);
@@ -402,7 +537,7 @@ function initializeLayout() {
   if (isMobile) {
     updateMobileLayout();
   } else {
-    setupDesktopLayout();
+    initializeDesktopLayout();
   }
   updateElementScaling();
 }
@@ -411,7 +546,8 @@ function updateNodePosition(body) {
   if (body.plugin && body.plugin.node) {
     const { x, y } = body.position;
     const { width, height } = body.plugin;
-    body.plugin.node.style.transform = `translate(${x - width / 2}px, ${y - height / 2}px)`;
+    body.plugin.node.style.left = `${x - width / 2}px`;
+    body.plugin.node.style.top = `${y - height / 2}px`;
   }
 }
 
@@ -425,51 +561,25 @@ function updateNodePositions() {
 }
 
 function updateNodeSize(body) {
-  if (body.plugin && body.plugin.project) {
-    const { width, height } = createNode(body.plugin.project, body.plugin.node.dataset.borderColor);
-    const scaledBorder = scaleValue(2);
-    const scaledPadding = scaleValue(12);
-    const totalWidth = width + 2 * (scaledBorder + scaledPadding);
-    const totalHeight = height + 2 * (scaledBorder + scaledPadding);
-    
-    // Update the body size
-    Matter.Body.scale(body, totalWidth / body.plugin.width, totalHeight / body.plugin.height);
-    
-    // Update the plugin properties
-    body.plugin.width = totalWidth;
-    body.plugin.height = totalHeight;
-    body.plugin.innerWidth = width;
-    body.plugin.innerHeight = height;
-    
-    // Update the node element styles
-    const node = body.plugin.node;
-    node.style.width = `${width}px`;
-    node.style.height = `${height}px`;
-    node.style.borderRadius = `${scaleValue(24)}px`;
-    node.style.padding = `${scaledPadding}px`;
-    node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
-    
-    // Update font sizes
-    node.style.fontSize = `${scaleValue(16)}px`;
-    node.querySelector('h2').style.fontSize = `${scaleValue(24)}px`;
-    node.querySelector('p').style.fontSize = `${scaleValue(16)}px`;
-    
-    // Update team icon size if present
-    const teamIconDiv = node.querySelector('.team-icon');
-    if (teamIconDiv) {
-      const iconPaddingTop = isMobile ? '6px' : `${scaleValue(10)}px`;
-      const iconPaddingRight = isMobile ? '8px' : `${scaleValue(12)}px`;
-      teamIconDiv.style.top = iconPaddingTop;
-      teamIconDiv.style.right = iconPaddingRight;
-      teamIconDiv.style.width = 'auto';
-      teamIconDiv.style.height = 'auto';
+  const { node, project } = body.plugin;
 
-      const teamText = teamIconDiv.querySelector('span');
-      if (teamText) {
-        applyTeamTextStyles(teamText);
-      }
-    }
+  // Recompute scaled dimensions
+  const scaledWidth = isMobile ? (window.innerWidth - 64) : scaleValue(project.width);
+  let scaledHeight;
+
+  if (isMobile) {
+    node.style.width = `calc(100% - 64px)`;
+    scaledHeight = node.getBoundingClientRect().height;
+  } else {
+    scaledHeight = scaleValue(project.height);
+    node.style.width = `${scaledWidth}px`;
+    node.style.height = `${scaledHeight}px`;
   }
+
+  // Update body and plugin dimensions
+  Body.setVertices(body, Matter.Vertices.fromPath(`0 0 ${scaledWidth} 0 ${scaledWidth} ${scaledHeight} 0 ${scaledHeight}`));
+  body.plugin.width = scaledWidth;
+  body.plugin.height = scaledHeight;
 }
 
 function checkHover(event) {
@@ -481,22 +591,22 @@ function checkHover(event) {
     if (hoveredBody && hoveredBody.plugin && hoveredBody.plugin.node) {
       const node = hoveredBody.plugin.node;
       node.style.filter = 'brightness(1)';
-      node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
+      node.style.boxShadow = `0 0 ${styleConfig.desktop.node.boxShadowSize} ${node.dataset.borderColor}`;
     }
 
     // Apply hover effect to the new node
     if (bodyUnderMouse && bodyUnderMouse.plugin && bodyUnderMouse.plugin.node) {
       const node = bodyUnderMouse.plugin.node;
       const borderColor = node.dataset.borderColor;
-      node.style.filter = 'brightness(1.2)';
-      node.style.boxShadow = `0 0 ${scaleValue(30)}px ${borderColor}`;
+      node.style.filter = styleConfig.elementHover.brightness;
+      node.style.boxShadow = `0 0 ${styleConfig.desktop.hoverBoxShadowSize()} ${borderColor}`;
 
-      cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px ${applyOpacity(borderColor, 0.4)}`;
+      cursorGlow.style.boxShadow = styleConfig.cursorGlow.hoveredBoxShadow(borderColor, scale);
       cursorGlow.style.background = borderColor;
       cursorGlow.classList.add('hovered');
     } else {
-      cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`;
-      cursorGlow.style.background = 'rgba(255, 255, 255, 1)';
+      cursorGlow.style.boxShadow = styleConfig.cursorGlow.defaultBoxShadow(scale);
+      cursorGlow.style.background = styleConfig.cursorGlow.defaultBackground;
       cursorGlow.classList.remove('hovered');
     }
 
@@ -515,15 +625,21 @@ function handleHover(event) {
 }
 
 function isPointInsideBody(point, body) {
-  const { x, y } = body.position;
-  const { width, height } = body.plugin;
-  
-  return (
-    point.x >= x - width / 2 &&
-    point.x <= x + width / 2 &&
-    point.y >= y - height / 2 &&
-    point.y <= y + height / 2
-  );
+  if (body.plugin && body.plugin.node) {
+    const rect = body.plugin.node.getBoundingClientRect();
+
+    // Adjust point coordinates relative to the viewport
+    const mouseX = point.x + window.scrollX;
+    const mouseY = point.y + window.scrollY;
+
+    return (
+      mouseX >= rect.left &&
+      mouseX <= rect.right &&
+      mouseY >= rect.top &&
+      mouseY <= rect.bottom
+    );
+  }
+  return false;
 }
 
 function setupMouseInteraction() {
@@ -554,9 +670,15 @@ function setupMouseInteraction() {
         x: event.clientX - canvas.getBoundingClientRect().left,
         y: event.clientY - canvas.getBoundingClientRect().top
       };
-      if (draggedBody && (Math.abs(mousePosition.x - clickStartPosition.x) > 5 || Math.abs(mousePosition.y - clickStartPosition.y) > 5)) {
-        isDragging = true;
+    
+      // Only set isDragging to true if we are not already dragging
+      if (!isDragging && draggedBody && clickStartPosition) {
+        const movedEnough = Math.abs(mousePosition.x - clickStartPosition.x) > 5 || Math.abs(mousePosition.y - clickStartPosition.y) > 5;
+        if (movedEnough) {
+          isDragging = true;
+        }
       }
+    
       if (isDragging && draggedBody) {
         const newPosition = {
           x: mousePosition.x - dragOffset.x,
@@ -564,8 +686,10 @@ function setupMouseInteraction() {
         };
         Matter.Body.setPosition(draggedBody, newPosition);
         updateNodePosition(draggedBody);
+        disableTextHoverEffects();
       } else {
         handleHover({ mouse: { position: mousePosition } });
+        enableTextHoverEffects();
       }
     });
 
@@ -591,6 +715,7 @@ function setupMouseInteraction() {
       isDragging = false;
       draggedBody = null;
       dragOffset = { x: 0, y: 0 };
+      clickStartPosition = null;
     });
 
     document.addEventListener('mouseleave', () => {
@@ -602,7 +727,7 @@ function setupMouseInteraction() {
       if (hoveredBody && hoveredBody.plugin && hoveredBody.plugin.node) {
         const node = hoveredBody.plugin.node;
         node.style.filter = 'brightness(1)';
-        node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
+        node.style.boxShadow = `0 0 ${styleConfig.desktop.defaultBoxShadowSize()} ${node.dataset.borderColor}`;
       }
       hoveredBody = null;
       enableTextHoverEffects();
@@ -610,77 +735,38 @@ function setupMouseInteraction() {
   }
 }
 
-function setupDesktopLayout() {
-  const networkElement = document.getElementById('network');
-  networkElement.innerHTML = '';
-
-  // Clean up existing Matter.js instances if they exist
-  if (engine) {
-    World.clear(engine.world);
-    Engine.clear(engine);
-  }
+function updateDesktopLayout() {
   if (render) {
-    Render.stop(render);
-    render.canvas.remove();
-    render.canvas = null;
-    render.context = null;
-    render = null;
-  }
-  if (runner) {
-    Runner.stop(runner);
-    runner = null;
-  }
+    render.canvas.width = window.innerWidth;
+    render.canvas.height = window.innerHeight;
+    render.options.width = window.innerWidth;
+    render.options.height = window.innerHeight;
+    Matter.Render.setPixelRatio(render, window.devicePixelRatio);
 
-  networkElement.style.position = 'absolute';
-  networkElement.style.width = '100%';
-  networkElement.style.height = '100%';
-  networkElement.style.padding = '0';
+    centerX = render.options.width / 2;
+    centerY = render.options.height / 2;
+    centerRadius = scaleValue(150);
+    safeZoneRadius = centerRadius + scaleValue(250);
 
-  if (world) {
-    World.clear(world);
-    Engine.clear(engine);
-  }
+    updateBodySizes();
 
-  engine = Engine.create({
-    enableSleeping: true,
-    gravity: { x: 0, y: 0 },
-    sleepThreshold: 15,
-    timing: { timeScale: 1 }
-  });
-  world = engine.world;
-
-  if (render) {
-    Render.stop(render);
-    render.canvas.remove();
-    render.canvas = null;
-    render.context = null;
-    render = null;
+    nodes.forEach((body, index) => {
+      updateNodeSize(body);
+    });
+  } else {
+    console.warn("Render is not initialized. Reinitializing desktop layout.");
+    initializeDesktopLayout();
   }
 
-  render = Render.create({
-    element: networkElement,
-    engine: engine,
-    options: {
-      width: networkElement.clientWidth,
-      height: networkElement.clientHeight,
-      wireframes: false,
-      background: 'transparent'
-    }
-  });
+  // Reset container and title styles for desktop
+  const container = document.getElementById('container');
+  Object.assign(container.style, styleConfig.desktop.containerStyles);
 
-  centerX = render.options.width / 2;
-  centerY = render.options.height / 2;
-  centerRadius = scaleValue(150);
-  safeZoneRadius = centerRadius + scaleValue(250);
+  const titleSubtitleContainer = document.getElementById('title-subtitle-container');
+  Object.assign(titleSubtitleContainer.style, styleConfig.desktop.titleSubtitleContainerStyles);
 
-  createNodes();
-  setupMouseInteraction();
-
-  Matter.Events.on(engine, 'beforeUpdate', applyCustomGravity);
-
-  Render.run(render);
-  Runner.run(Runner.create(), engine);
-  updateNodePositions();
+  const network = document.getElementById('network');
+  Object.assign(network.style, styleConfig.desktop.networkStyles);
 }
 
 function initializeDesktopLayout() {
@@ -761,19 +847,31 @@ function initializeDesktopLayout() {
   });
 
   // Recreate mouse constraint
-  const mouse = Mouse.create(render.canvas);
-  mouseConstraint = MouseConstraint.create(engine, {
-    mouse: mouse,
-    constraint: {
-      stiffness: 0.2,
-      render: { visible: false }
-    }
-  });
+  if (isMobile) {
+    const mouse = Mouse.create(render.canvas);
+    mouseConstraint = MouseConstraint.create(engine, {
+      mouse: mouse,
+      constraint: {
+        stiffness: 0.2,
+        render: { visible: false }
+      }
+    });
+  
+    World.add(world, mouseConstraint);
+  }
 
-  World.add(world, mouseConstraint);
+  // Remove existing applyCustomGravity listener if it exists
+  if (applyCustomGravityHandler) {
+    Matter.Events.off(engine, 'beforeUpdate', applyCustomGravityHandler);
+  }
+
+  // Create a new handler that captures the latest variables
+  applyCustomGravityHandler = function() {
+    applyCustomGravity();
+  };
 
   // Add custom gravity
-  Matter.Events.on(engine, 'beforeUpdate', applyCustomGravity);
+  Matter.Events.on(engine, 'beforeUpdate', applyCustomGravityHandler);
 
   Render.run(render);
   Runner.run(Runner.create(), engine);
@@ -786,6 +884,8 @@ function initializeDesktopLayout() {
       y: (Math.random() - 0.8) * 10
     });
   });
+
+  setupMouseInteraction();
 }
 
 function updateDesktopLayout() {
@@ -856,9 +956,7 @@ function handleMobileTouchStart(event) {
   };
   const node = event.currentTarget;
   if (node) {
-    // Apply glow effect
-    node.style.filter = 'brightness(1.2)';
-    node.style.boxShadow = `0 0 40px ${node.dataset.borderColor}`;
+    applyNodeTouchEffect(node, true);
   }
 }
 
@@ -867,8 +965,7 @@ function handleMobileTouchEnd(event) {
   const node = event.currentTarget;
   if (node) {
     // Remove glow effect
-    node.style.filter = 'brightness(1)';
-    node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
+    applyNodeTouchEffect(node, false);
   }
   if (touchStartPosition) {
     const touchEndPosition = {
@@ -894,9 +991,7 @@ function handleMobileTouchEnd(event) {
 function handleMobileTouchCancel(event) {
   const node = event.currentTarget;
   if (node) {
-    // Remove glow effect
-    node.style.filter = 'brightness(1)';
-    node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
+    applyNodeTouchEffect(node, false);
   }
   touchStartPosition = null;
 }
@@ -908,14 +1003,17 @@ function handleMobileTouchMove(event) {
     const touchX = touch.clientX;
     const touchY = touch.clientY;
     const rect = node.getBoundingClientRect();
-    if (touchX < rect.left || touchX > rect.right || touchY < rect.top || touchY > rect.bottom) {
+    if (
+      touchX < rect.left ||
+      touchX > rect.right ||
+      touchY < rect.top ||
+      touchY > rect.bottom
+    ) {
       // Touch moved outside the node, remove glow effect
-      node.style.filter = 'brightness(1)';
-      node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
+      applyNodeTouchEffect(node, false);
     } else {
       // Touch is still within the node, ensure the glow effect is applied
-      node.style.filter = 'brightness(1.2)';
-      node.style.boxShadow = `0 0 40px ${node.dataset.borderColor}`;
+      applyNodeTouchEffect(node, true);
     }
   }
 }
@@ -926,7 +1024,7 @@ function updateMobileLayout() {
   network.style.position = 'static';
   network.style.width = '100%';
   network.style.height = 'auto';
-  network.style.padding = '20px 32px';
+  network.style.padding = styleConfig.mobile.networkPadding;
 
   projects.forEach((project, index) => {
     const borderColor = colors[index];
@@ -935,19 +1033,9 @@ function updateMobileLayout() {
 
     // Apply mobile-specific styles
     node.style.position = 'static';
-    node.style.width = 'calc(100% - 64px)';
-    node.style.height = 'auto';
-    node.style.marginBottom = '48px';
-    node.style.padding = '32px 8px';
+    node.style.marginBottom = styleConfig.mobile.nodeMarginBottom;
     node.style.transform = 'none';
-    node.style.fontSize = '14px'; // Base font size for mobile
     node.style.pointerEvents = 'auto'; // To enable touch events on mobile
-
-    // Adjust title and description font sizes
-    const title = node.querySelector('h2');
-    const description = node.querySelector('p');
-    title.style.fontSize = '18px';
-    description.style.fontSize = '14px';
 
     // Add touch event listeners for mobile
     node.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
@@ -965,20 +1053,20 @@ function updateMobileLayout() {
   const titleSubtitleContainer = document.getElementById('title-subtitle-container');
   titleSubtitleContainer.style.position = 'static';
   titleSubtitleContainer.style.transform = 'none';
-  titleSubtitleContainer.style.padding = '20px 16px';
-  titleSubtitleContainer.style.marginBottom = '20px'; // Add space between title and nodes
+  titleSubtitleContainer.style.padding = styleConfig.mobile.titleSubtitleContainerPadding;
+  titleSubtitleContainer.style.marginBottom = styleConfig.mobile.titleSubtitleContainerMarginBottom;
 
   const mainTitle = document.getElementById('main-title');
   const mainSubtitle = document.getElementById('main-subtitle');
-  mainTitle.style.fontSize = '32px'; // Adjust based on your preference
-  mainSubtitle.style.fontSize = '18px'; // Adjust based on your preference
+  mainTitle.style.fontSize = styleConfig.mobile.mainTitleFontSize;
+  mainSubtitle.style.fontSize = styleConfig.mobile.mainSubtitleFontSize;
 
   const xIconContainer = document.getElementById('x-icon-container');
   const discordIconContainer = document.getElementById('discord-icon-container');
-  xIconContainer.style.width = '24px';
-  xIconContainer.style.height = '24px';
-  discordIconContainer.style.width = '24px';
-  discordIconContainer.style.height = '24px';
+  xIconContainer.style.width = styleConfig.mobile.iconSize;
+  xIconContainer.style.height = styleConfig.mobile.iconSize;
+  discordIconContainer.style.width = styleConfig.mobile.iconSize;
+  discordIconContainer.style.height = styleConfig.mobile.iconSize;
 }
 
 // Calculates the overlap (or gap) between the rectangles along the x and y axes and then computes the Euclidean distance between the edges
@@ -1000,32 +1088,15 @@ function computeEdgeDistance(nodeA, nodeB) {
 function updateBodySizes() {
   nodes.forEach((body) => {
     if (body.plugin && body.plugin.project) {
-      const { node, width, height, innerWidth, innerHeight } = createNode(body.plugin.project, body.plugin.node.dataset.borderColor);
-      
+      const { node, width, height } = createNode(body.plugin.project, body.plugin.node.dataset.borderColor);
+
       // Scale the physics body
       Matter.Body.scale(body, width / body.plugin.width, height / body.plugin.height);
-      
+
       // Update the plugin properties
-      Object.assign(body.plugin, { width, height, innerWidth, innerHeight });
-      
-      // Update the node element styles individually
-      const existingNode = body.plugin.node;
-      existingNode.style.width = node.style.width;
-      existingNode.style.height = node.style.height;
-      existingNode.style.border = node.style.border;
-      existingNode.style.boxShadow = node.style.boxShadow;
-      existingNode.style.borderRadius = node.style.borderRadius;
-      existingNode.style.padding = node.style.padding;
-      existingNode.style.fontSize = node.style.fontSize;
-      
-      // Update nested elements' font sizes
-      const existingH2 = existingNode.querySelector('h2');
-      const existingP = existingNode.querySelector('p');
-      const newH2 = node.querySelector('h2');
-      const newP = node.querySelector('p');
-      
-      if (existingH2 && newH2) existingH2.style.fontSize = newH2.style.fontSize;
-      if (existingP && newP) existingP.style.fontSize = newP.style.fontSize;
+      Object.assign(body.plugin, { width, height });
+
+      // The node's styles are already set in createNode, so we don't need to set them here
     }
   });
 }
@@ -1037,33 +1108,24 @@ function updateElementScaling() {
   const xIconContainer = document.getElementById('x-icon-container');
   const discordIconContainer = document.getElementById('discord-icon-container');
 
-  mainTitle.style.fontSize = `${scaleValue(48)}px`;
-  mainSubtitle.style.fontSize = `${scaleValue(16)}px`;
+  const config = isMobile ? styleConfig.mobile : styleConfig.desktop;
 
-  // Scale the X icon
+  mainTitle.style.fontSize = isMobile ? styleConfig.mobile.mainTitleFontSize : styleConfig.desktop.mainTitleFontSize();
+  mainSubtitle.style.fontSize = isMobile ? styleConfig.mobile.mainSubtitleFontSize : styleConfig.desktop.mainSubtitleFontSize();
+
   if (!isMobile) {
-    const xIconSize = scaleValue(28);
-    xIconContainer.style.width = `${xIconSize}px`;
-    xIconContainer.style.height = `${xIconSize}px`;
+    xIconContainer.style.width = config.iconSize();
+    xIconContainer.style.height = config.iconSize();
+    discordIconContainer.style.width = config.iconSize();
+    discordIconContainer.style.height = config.iconSize();
   }
 
-  // Scale the Discord icon
-  if (!isMobile) {
-    const discordIconSize = scaleValue(28);
-    discordIconContainer.style.width = `${discordIconSize}px`;
-    discordIconContainer.style.height = `${discordIconSize}px`;
-  }
-
-  // Update team text
+  // Update team text styles for all nodes
   nodes.forEach((body) => {
     if (body.plugin && body.plugin.node) {
-      const node = body.plugin.node;
-      const teamIconDiv = node.querySelector('.team-icon');
+      const teamIconDiv = body.plugin.node.querySelector('.team-icon');
       if (teamIconDiv) {
-        const iconPaddingTop = isMobile ? '6px' : `${scaleValue(10)}px`;
-        const iconPaddingRight = isMobile ? '8px' : `${scaleValue(12)}px`;
-        teamIconDiv.style.top = iconPaddingTop;
-        teamIconDiv.style.right = iconPaddingRight;
+        Object.assign(teamIconDiv.style, getTeamIconStyles());
 
         const teamText = teamIconDiv.querySelector('span');
         if (teamText) {
@@ -1076,18 +1138,18 @@ function updateElementScaling() {
 
 function handleElementHover(event) {
   if (!isDragging) {
-    cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(38, 139, 217, 0.4)`;
+    cursorGlow.style.boxShadow = styleConfig.cursorGlow.hoveredBoxShadow('rgba(38, 139, 217, 1)', scale);
     cursorGlow.style.background = 'rgba(38, 139, 217, 1)';
     cursorGlow.classList.add('hovered');
 
     if (event.target.id === 'main-title-link') {
       const mainTitle = document.getElementById('main-title');
-      mainTitle.style.filter = 'brightness(1.2)';
-      mainTitle.style.textShadow = `0 0 ${scaleValue(30)}px rgba(255, 255, 255, 0.8)`;
+      mainTitle.style.filter = styleConfig.elementHover.brightness;
+      mainTitle.style.textShadow = styleConfig.elementHover.textShadow(scale);
     } else {
       const icon = event.target.querySelector('svg');
       if (icon) {
-        icon.style.filter = `drop-shadow(0 0 ${scaleValue(5)}px rgba(255, 255, 255, 0.8))`;
+        icon.style.filter = `drop-shadow(0 0 ${styleConfig.desktop.iconDropShadowSize()} rgba(255, 255, 255, 0.8))`;
       }
     }
   }
@@ -1123,8 +1185,8 @@ function enableTextHoverEffects() {
 }
 
 function handleElementLeave() {
-  cursorGlow.style.boxShadow = `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`;
-  cursorGlow.style.background = 'rgba(255, 255, 255, 1)';
+  cursorGlow.style.boxShadow = styleConfig.cursorGlow.defaultBoxShadow(scale);
+  cursorGlow.style.background = styleConfig.cursorGlow.defaultBackground;
   cursorGlow.classList.remove('hovered');
 
   const mainTitle = document.getElementById('main-title');
@@ -1136,108 +1198,6 @@ function handleElementLeave() {
 }
 
 const colors = getDistinctColors(projects.length);
-if (isMobile) {
-  const network = document.getElementById('network');
-  projects.forEach((project, index) => {
-    const borderColor = colors[index];
-    network.appendChild(createNode(project, borderColor).node);
-  });
-} else {
-  const { Engine, Render, World, Bodies, Mouse, MouseConstraint, Body, Runner, Vector } = Matter;
-
-  engine = Engine.create({
-    enableSleeping: true,
-    gravity: { x: 0, y: 0 },
-    sleepTolerance: 0.1,
-    timing: { timeScale: 1 }
-  });
-  world = engine.world;
-
-  world.gravity.y = 0;
-
-  const networkElement = document.getElementById('network');
-  render = Render.create({
-    element: networkElement,
-    engine: engine,
-    options: {
-      width: networkElement.clientWidth,
-      height: networkElement.clientHeight,
-      wireframes: false,
-      background: 'transparent'
-    }
-  });
-
-  cursorGlow.id = 'cursor-glow';
-  networkElement.appendChild(cursorGlow);
-
-  Matter.use('keep-in-bounds', function(Matter) {
-    return {
-      name: 'keep-in-bounds',
-      version: '0.1.0',
-      install: function(Matter) {
-        Matter.after('Engine.update', function() {
-          const bodies = Matter.Composite.allBodies(engine.world);
-          for (let i = 0; i < bodies.length; i++) {
-            const body = bodies[i];
-            if (body.position.x < 0) Matter.Body.setPosition(body, { x: 0, y: body.position.y });
-            if (body.position.x > render.options.width) Matter.Body.setPosition(body, { x: render.options.width, y: body.position.y });
-            if (body.position.y < 0) Matter.Body.setPosition(body, { x: body.position.x, y: 0 });
-            if (body.position.y > render.options.height) Matter.Body.setPosition(body, { x: body.position.x, y: render.options.height });
-          }
-        });
-      }
-    };
-  });
-
-  Matter.Events.on(engine, 'beforeUpdate', applyCustomGravity);
-
-  const mouse = Mouse.create(render.canvas);
-  const mouseConstraint = MouseConstraint.create(engine, {
-    mouse: mouse,
-    constraint: {
-      stiffness: 0.2,
-      render: { visible: false }
-    }
-  });
-
-  World.add(world, mouseConstraint);
-
-  function handleClick(event) {
-    if (!isMobile) {
-      // Desktop click handling
-      if (clickStartPosition) {
-        const clickEndPosition = event.mouse.position;
-        const dx = clickEndPosition.x - clickStartPosition.x;
-        const dy = clickEndPosition.y - clickStartPosition.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-  
-        if (distance < 5) {
-          const clickedBody = Matter.Query.point(nodes, clickEndPosition)[0];
-          if (clickedBody && clickedBody.plugin && clickedBody.plugin.project) {
-            window.open(clickedBody.plugin.project.link);
-          }
-        }
-        clickStartPosition = null;
-      }
-    }
-  }
-
-  // Handle when the mouse leaves the canvas
-  render.canvas.addEventListener('mouseleave', function() {
-    if (hoveredBody && hoveredBody.plugin && hoveredBody.plugin.node) {
-      const node = hoveredBody.plugin.node;
-      node.style.filter = 'brightness(1)';
-      node.style.boxShadow = `0 0 20px ${node.dataset.borderColor}`;
-    }
-    hoveredBody = null;
-  });
-
-  Render.run(render);
-  Runner.run(Runner.create(), engine);
-
-  updateNodePositions();
-}
-
 const mainTitleLink = document.getElementById('main-title-link');
 const xIconLink = document.getElementById('x-icon-link');
 const discordIconLink = document.getElementById('discord-icon-link');
@@ -1289,7 +1249,7 @@ document.querySelectorAll('a').forEach(link => {
 initializeMatter();
 
 // Event listener for window resize
-window.addEventListener('resize', () => {
+window.addEventListener('resize', debounce(() => {
   const wasMobile = isMobile;
   updateScale();
   updateMobileStatus();
@@ -1299,7 +1259,7 @@ window.addEventListener('resize', () => {
     if (isMobile) {
       updateMobileLayout();
     } else {
-      setupDesktopLayout();
+      initializeDesktopLayout();
     }
   } else if (!isMobile) {
     updateDesktopLayout();
@@ -1309,6 +1269,6 @@ window.addEventListener('resize', () => {
 
   // Update node sizes after resize
   nodes.forEach(updateNodeSize);
-});
+}, 200));
 
 window.addEventListener('load', initializeLayout);
