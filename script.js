@@ -60,7 +60,7 @@ const styleConfig = {
       pFontSize: '14px',
       borderSize: '2px',
       borderRadius: '16px',
-      paddingSize: '12px',
+      paddingSize: '24px 8px',
       boxShadowSize: '30px'
     },
     teamText: {
@@ -267,7 +267,7 @@ function applyCustomGravity() {
   // Recalculate centerX and centerY based on the current render dimensions
   centerX = render.options.width / 2;
   centerY = render.options.height / 2;
-  centerRadius = scaleValue(180);
+  centerRadius = 250 * Math.pow(scale, 3);
   safeZoneRadiusX = centerRadius + scaleValue(250);
   safeZoneRadiusY = safeZoneRadiusX * 0.7; // Height is 70% of the width
 
@@ -278,7 +278,6 @@ function applyCustomGravity() {
 
   nodes.forEach((nodeA, i) => {
     const directionToCenter = Vector.sub(centerPosition, nodeA.position);
-    const distanceToCenter = Vector.magnitude(directionToCenter);
 
     // Calculate the normalized distance to the ellipse edge
     const normalizedX = directionToCenter.x / safeZoneRadiusX;
