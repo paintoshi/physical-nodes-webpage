@@ -86,23 +86,23 @@ const styleConfig = {
     node: {
       width: project => `${scaleValue(project.width)}px`,
       height: project => `${scaleValue(project.height)}px`,
-      fontSize: `${scaleValue(16)}px`,
-      h2FontSize: `${scaleValue(24)}px`,
-      pFontSize: `${scaleValue(16)}px`,
-      borderSize: `${scaleValue(2)}px`,
-      borderRadius: `${scaleValue(24)}px`,
-      paddingSize: `${scaleValue(12)}px`,
-      boxShadowSize: `${scaleValue(20)}px`
+      fontSize: () => `${scaleValue(16)}px`,
+      h2FontSize: () => `${scaleValue(24)}px`,
+      pFontSize: () => `${scaleValue(16)}px`,
+      borderSize: () => `${scaleValue(2)}px`,
+      borderRadius: () => `${scaleValue(24)}px`,
+      paddingSize: () => `${scaleValue(12)}px`,
+      boxShadowSize: () => `${scaleValue(20)}px`
     },
     teamText: {
-      fontSize: `${scaleValue(10)}px`,
-      borderWidth: `${scaleValue(1)}px`,
-      padding: `${scaleValue(2)}px ${scaleValue(4)}px`,
-      borderRadius: `${scaleValue(4)}px`
+      fontSize: () => `${scaleValue(10)}px`,
+      borderWidth: () => `${scaleValue(1)}px`,
+      padding: () => `${scaleValue(2)}px ${scaleValue(4)}px`,
+      borderRadius: () => `${scaleValue(4)}px`
     },
     teamIcon: {
-      top: `${scaleValue(10)}px`,
-      right: `${scaleValue(12)}px`
+      top: () => `${scaleValue(10)}px`,
+      right: () => `${scaleValue(12)}px`
     },
     mainTitleFontSize: () => `${scaleValue(48)}px`,
     mainSubtitleFontSize: () => `${scaleValue(16)}px`,
@@ -129,48 +129,48 @@ const styleConfig = {
     iconDropShadowSize: () => `${scaleValue(5)}px`,
   },
   cursorGlow: {
-    defaultBoxShadow: (scale) => `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`,
-    hoveredBoxShadow: (color, scale) => `0 0 ${scaleValue(30)}px ${scaleValue(15)}px ${applyOpacity(color, 0.4)}`,
+    defaultBoxShadow: () => `0 0 ${scaleValue(30)}px ${scaleValue(15)}px rgba(255, 255, 255, 0.3)`,
+    hoveredBoxShadow: (color) => `0 0 ${scaleValue(30)}px ${scaleValue(15)}px ${applyOpacity(color, 0.4)}`,
     defaultBackground: 'rgba(255, 255, 255, 1)'
   },
   elementHover: {
     brightness: 'brightness(1.2)',
-    textShadow: (scale) => `0 0 ${scaleValue(30)}px rgba(255, 255, 255, 0.8)`
+    textShadow: () => `0 0 ${scaleValue(30)}px rgba(255, 255, 255, 0.8)`
   }
 };
 
-function debounce(func, wait) {
-  let timeout;
-  return function(...args) {
-    const context = this;
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(context, args), wait);
-  };
-}
-
 function getNodeStyles(project, borderColor) {
   const config = isMobile ? styleConfig.mobile.node : styleConfig.desktop.node;
+  const fontSize = isMobile ? styleConfig.mobile.node.fontSize : styleConfig.desktop.node.fontSize();
+  const borderSize = isMobile ? styleConfig.mobile.node.borderSize : styleConfig.desktop.node.borderSize();
+  const borderRadius = isMobile ? styleConfig.mobile.node.borderRadius : styleConfig.desktop.node.borderRadius();
+  const paddingSize = isMobile ? styleConfig.mobile.node.paddingSize : styleConfig.desktop.node.paddingSize();
+  const boxShadowSize = isMobile ? styleConfig.mobile.node.boxShadowSize : styleConfig.desktop.node.boxShadowSize();
   return {
     width: isMobile ? config.width : config.width(project),
     height: isMobile ? config.height : config.height(project),
-    fontSize: config.fontSize,
-    border: `${config.borderSize} solid ${borderColor}`,
-    boxShadow: `0 0 ${config.boxShadowSize} ${borderColor}`,
-    borderRadius: config.borderRadius,
-    padding: config.paddingSize,
+    fontSize,
+    border: `${borderSize} solid ${borderColor}`,
+    boxShadow: `0 0 ${boxShadowSize} ${borderColor}`,
+    borderRadius: borderRadius,
+    padding: paddingSize,
     backgroundColor: darkenColor(borderColor, 40),
     opacity: '0.9'
   };
 }
 
 function applyTeamTextStyles(teamText) {
-  const config = isMobile ? styleConfig.mobile.teamText : styleConfig.desktop.teamText;
+  const fontSize = isMobile ? styleConfig.mobile.teamText.fontSize : styleConfig.desktop.teamText.fontSize();
+  const borderWidth = isMobile ? styleConfig.mobile.teamText.borderWidth : styleConfig.desktop.teamText.borderWidth();
+  const padding = isMobile ? styleConfig.mobile.teamText.padding : styleConfig.desktop.teamText.padding();
+  const borderRadius = isMobile ? styleConfig.mobile.teamText.borderRadius : styleConfig.desktop.teamText.borderRadius();
+
   Object.assign(teamText.style, {
-    fontSize: config.fontSize,
+    fontSize: fontSize,
     fontFamily: 'Orbitron, sans-serif',
-    border: `${config.borderWidth} solid #d9e4ed`,
-    padding: config.padding,
-    borderRadius: config.borderRadius,
+    border: `${borderWidth} solid #d9e4ed`,
+    padding: padding,
+    borderRadius: borderRadius,
     lineHeight: '1',
     color: '#d9e4ed',
     display: 'inline-block'
@@ -178,11 +178,12 @@ function applyTeamTextStyles(teamText) {
 }
 
 function getTeamIconStyles() {
-  const config = isMobile ? styleConfig.mobile.teamIcon : styleConfig.desktop.teamIcon;
+  const top = isMobile ? styleConfig.mobile.teamIcon.top : styleConfig.desktop.teamIcon.top();
+  const right = isMobile ? styleConfig.mobile.teamIcon.right : styleConfig.desktop.teamIcon.right();
   return {
     position: 'absolute',
-    top: config.top,
-    right: config.right,
+    top: top,
+    right: right,
     pointerEvents: 'none',
     width: 'auto',
     height: 'auto'
@@ -266,9 +267,9 @@ function applyCustomGravity() {
   // Recalculate centerX and centerY based on the current render dimensions
   centerX = render.options.width / 2;
   centerY = render.options.height / 2;
-  centerRadius = scaleValue(200);
+  centerRadius = scaleValue(180);
   safeZoneRadiusX = centerRadius + scaleValue(250);
-  safeZoneRadiusY = safeZoneRadiusX * 0.6; // Height is 60% of the width
+  safeZoneRadiusY = safeZoneRadiusX * 0.7; // Height is 70% of the width
 
   const centerPosition = Vector.create(centerX, centerY);
   const baseStrength = startBaseStrength * Math.pow(scale, 4);
@@ -338,11 +339,18 @@ function scaleValue(value) {
   return value * scale;
 }
 
+function updateNodeFontSizes(node) {
+  const h2 = node.querySelector('h2');
+  const p = node.querySelector('p');
+  h2.style.fontSize = isMobile ? styleConfig.mobile.node.h2FontSize : styleConfig.desktop.node.h2FontSize();
+  p.style.fontSize = isMobile ? styleConfig.mobile.node.pFontSize : styleConfig.desktop.node.pFontSize();
+}
+
 function applyTeamTextStyles(teamText) {
-  const fontSize = isMobile ? '10px' : `${scaleValue(10)}px`;
-  const borderWidth = isMobile ? '1px' : `${scaleValue(1)}px`;
-  const paddingValue = isMobile ? '2px 4px 2px 4px' : `${scaleValue(2)}px ${scaleValue(4)}px ${scaleValue(2)}px ${scaleValue(4)}px`;
-  const borderRadiusValue = isMobile ? '4px' : `${scaleValue(4)}px`;
+ const fontSize = isMobile ? styleConfig.mobile.teamText.fontSize : styleConfig.desktop.teamText.fontSize();
+ const borderWidth = isMobile ? styleConfig.mobile.teamText.borderWidth : styleConfig.desktop.teamText.borderWidth();
+ const paddingValue = isMobile ? styleConfig.mobile.teamText.padding : styleConfig.desktop.teamText.padding();
+ const borderRadiusValue = isMobile ? styleConfig.mobile.teamText.borderRadius : styleConfig.desktop.teamText.borderRadius();
 
   teamText.style.fontSize = fontSize;
   teamText.style.fontFamily = 'Orbitron, sans-serif';
@@ -389,11 +397,7 @@ function createNode(project, borderColor) {
   Object.assign(node.style, getNodeStyles(project, borderColor));
 
   // Set font sizes for h2 and p
-  const h2 = node.querySelector('h2');
-  const p = node.querySelector('p');
-  const config = isMobile ? styleConfig.mobile.node : styleConfig.desktop.node;
-  h2.style.fontSize = config.h2FontSize;
-  p.style.fontSize = config.pFontSize;
+  updateNodeFontSizes(node);
 
   if (project.team) {
     const teamIconDiv = document.createElement('div');
@@ -585,6 +589,9 @@ function updateNodeSize(body) {
   Body.setVertices(body, Matter.Vertices.fromPath(`0 0 ${scaledWidth} 0 ${scaledWidth} ${scaledHeight} 0 ${scaledHeight}`));
   body.plugin.width = scaledWidth;
   body.plugin.height = scaledHeight;
+
+  // Update font sizes
+  updateNodeFontSizes(node);
 }
 
 function checkHover(event) {
@@ -596,7 +603,7 @@ function checkHover(event) {
     if (hoveredBody && hoveredBody.plugin && hoveredBody.plugin.node) {
       const node = hoveredBody.plugin.node;
       node.style.filter = 'brightness(1)';
-      node.style.boxShadow = `0 0 ${styleConfig.desktop.node.boxShadowSize} ${node.dataset.borderColor}`;
+      node.style.boxShadow = `0 0 ${styleConfig.desktop.node.boxShadowSize()} ${node.dataset.borderColor}`;
     }
 
     // Apply hover effect to the new node
@@ -606,11 +613,11 @@ function checkHover(event) {
       node.style.filter = styleConfig.elementHover.brightness;
       node.style.boxShadow = `0 0 ${styleConfig.desktop.hoverBoxShadowSize()} ${borderColor}`;
 
-      cursorGlow.style.boxShadow = styleConfig.cursorGlow.hoveredBoxShadow(borderColor, scale);
+      cursorGlow.style.boxShadow = styleConfig.cursorGlow.hoveredBoxShadow(borderColor);
       cursorGlow.style.background = borderColor;
       cursorGlow.classList.add('hovered');
     } else {
-      cursorGlow.style.boxShadow = styleConfig.cursorGlow.defaultBoxShadow(scale);
+      cursorGlow.style.boxShadow = styleConfig.cursorGlow.defaultBoxShadow();
       cursorGlow.style.background = styleConfig.cursorGlow.defaultBackground;
       cursorGlow.classList.remove('hovered');
     }
@@ -750,13 +757,16 @@ function updateDesktopLayout() {
 
     centerX = render.options.width / 2;
     centerY = render.options.height / 2;
-    centerRadius = scaleValue(150);
-    safeZoneRadius = centerRadius + scaleValue(250);
+    centerRadius = scaleValue(200);
+    safeZoneRadiusX = centerRadius + scaleValue(250);
+    safeZoneRadiusY = safeZoneRadiusX * 0.6;
 
     updateBodySizes();
 
-    nodes.forEach((body, index) => {
+    nodes.forEach((body) => {
       updateNodeSize(body);
+      updateNodePosition(body);
+      updateNodeFontSizes(body.plugin.node);
     });
   } else {
     console.warn("Render is not initialized. Reinitializing desktop layout.");
@@ -772,6 +782,13 @@ function updateDesktopLayout() {
 
   const network = document.getElementById('network');
   Object.assign(network.style, styleConfig.desktop.networkStyles);
+
+  // Update font sizes for all nodes
+  nodes.forEach((body) => {
+    if (body.plugin && body.plugin.node) {
+      updateNodeFontSizes(body.plugin.node);
+    }
+  });
 }
 
 function initializeDesktopLayout() {
@@ -919,15 +936,15 @@ function updateDesktopLayout() {
 
       if (body.plugin && body.plugin.node) {
         const node = body.plugin.node;
-        node.style.width = `${scaledWidth}px`;
-        node.style.height = `${scaledHeight}px`;
+        node.style.width = styleConfig.desktop.node.width
+        node.style.height = styleConfig.desktop.node.height
         node.style.position = 'absolute';
-        node.style.fontSize = `${scaleValue(16)}px`;
-        node.querySelector('h2').style.fontSize = `${scaleValue(24)}px`;
-        node.querySelector('p').style.fontSize = `${scaleValue(16)}px`;
-        node.style.borderRadius = `${scaleValue(24)}px`;
-        node.style.padding = `${scaleValue(12)}px`;
-        node.style.boxShadow = `0 0 ${scaleValue(20)}px ${node.dataset.borderColor}`;
+        node.style.fontSize = styleConfig.desktop.node.fontSize();
+        node.style.borderRadius = styleConfig.desktop.node.borderRadius();
+        node.style.padding = styleConfig.desktop.node.paddingSize();
+        node.style.boxShadow = `0 0 ${styleConfig.desktop.defaultBoxShadowSize()} ${node.dataset.borderColor}`;
+        node.querySelector('h2').style.fontSize = styleConfig.desktop.node.h2FontSize();
+        node.querySelector('p').style.fontSize = styleConfig.desktop.node.pFontSize();
       }
     });
   } else {
@@ -1042,6 +1059,9 @@ function updateMobileLayout() {
     node.style.transform = 'none';
     node.style.pointerEvents = 'auto'; // To enable touch events on mobile
 
+    // Update font sizes
+    updateNodeFontSizes(node);
+
     // Add touch event listeners for mobile
     node.addEventListener('touchstart', handleMobileTouchStart, { passive: true });
     node.addEventListener('touchend', handleMobileTouchEnd, { passive: true });
@@ -1093,15 +1113,28 @@ function computeEdgeDistance(nodeA, nodeB) {
 function updateBodySizes() {
   nodes.forEach((body) => {
     if (body.plugin && body.plugin.project) {
-      const { node, width, height } = createNode(body.plugin.project, body.plugin.node.dataset.borderColor);
+      const scaledWidth = scaleValue(body.plugin.project.width);
+      const scaledHeight = scaleValue(body.plugin.project.height);
 
       // Scale the physics body
-      Matter.Body.scale(body, width / body.plugin.width, height / body.plugin.height);
+      Matter.Body.scale(body, scaledWidth / body.plugin.width, scaledHeight / body.plugin.height);
 
       // Update the plugin properties
-      Object.assign(body.plugin, { width, height });
+      body.plugin.width = scaledWidth;
+      body.plugin.height = scaledHeight;
 
-      // The node's styles are already set in createNode, so we don't need to set them here
+      // Update the node's styles
+      if (body.plugin.node) {
+        const node = body.plugin.node;
+        node.style.width = `${scaledWidth}px`;
+        node.style.height = `${scaledHeight}px`;
+        node.style.fontSize = styleConfig.desktop.node.fontSize();
+        node.querySelector('h2').style.fontSize = styleConfig.desktop.node.h2FontSize();
+        node.querySelector('p').style.fontSize = styleConfig.desktop.node.pFontSize();
+        node.style.borderRadius = styleConfig.desktop.node.borderRadius();
+        node.style.padding = styleConfig.desktop.node.paddingSize();
+        node.style.boxShadow = `0 0 ${styleConfig.desktop.defaultBoxShadowSize()} ${node.dataset.borderColor}`;
+      }
     }
   });
 }
@@ -1143,14 +1176,14 @@ function updateElementScaling() {
 
 function handleElementHover(event) {
   if (!isDragging) {
-    cursorGlow.style.boxShadow = styleConfig.cursorGlow.hoveredBoxShadow('rgba(38, 139, 217, 1)', scale);
+    cursorGlow.style.boxShadow = styleConfig.cursorGlow.hoveredBoxShadow('rgba(38, 139, 217, 1)');
     cursorGlow.style.background = 'rgba(38, 139, 217, 1)';
     cursorGlow.classList.add('hovered');
 
     if (event.target.id === 'main-title-link') {
       const mainTitle = document.getElementById('main-title');
       mainTitle.style.filter = styleConfig.elementHover.brightness;
-      mainTitle.style.textShadow = styleConfig.elementHover.textShadow(scale);
+      mainTitle.style.textShadow = styleConfig.elementHover.textShadow();
     } else {
       const icon = event.target.querySelector('svg');
       if (icon) {
@@ -1254,26 +1287,21 @@ document.querySelectorAll('a').forEach(link => {
 initializeMatter();
 
 // Event listener for window resize
-window.addEventListener('resize', debounce(() => {
-  const wasMobile = isMobile;
+window.addEventListener('resize', () => {
   updateScale();
   updateMobileStatus();
   updateCursorGlowVisibility();
+  updateLayout();
+  
+  // Update node sizes and positions immediately
+  nodes.forEach((body) => {
+    updateNodeSize(body);
+    updateNodePosition(body);
+  });
+});
 
-  if (wasMobile !== isMobile) {
-    if (isMobile) {
-      updateMobileLayout();
-    } else {
-      initializeDesktopLayout();
-    }
-  } else if (!isMobile) {
-    updateDesktopLayout();
-  }
-
-  updateElementScaling();
-
-  // Update node sizes after resize
-  nodes.forEach(updateNodeSize);
-}, 200));
-
-window.addEventListener('load', initializeLayout);
+// Ensure layout is initialized after the window loads
+window.addEventListener('load', () => {
+  updateScale();
+  initializeLayout();
+});
