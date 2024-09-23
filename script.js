@@ -1,8 +1,8 @@
 const projectsDesktop = [
   { title: 'PaintSwap', description: 'The ultimate open NFT marketplace', link: 'https://paintswap.finance', width: 280, height: 150, team: true },
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 160, height: 180, team: false },
-  { title: 'Fantom Music', description: 'Music visualizer of the Fantom chain', link: 'https://music.paintoshi.dev', width: 210, height: 110, team: false },
   { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 280, height: 150, team: true },
+  { title: 'Fantom Music', description: 'Music visualizer of the Fantom chain', link: 'https://music.paintoshi.dev', width: 210, height: 110, team: false },
   { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 170, height: 170, team: false },
   { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130, team: true },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120, team: false },
