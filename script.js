@@ -157,22 +157,6 @@ function applyCustomGravity() {
   });
 }
 
-function reinitializePhysics() {
-  if (engine) {
-    Engine.clear(engine);
-  }
-  engine = Engine.create({
-    enableSleeping: true,
-    gravity: { x: 0, y: 0 },
-    sleepTolerance: sleepTolerance,
-    timing: { timeScale: 1 }
-  });
-  world = engine.world;
-
-  // Re-add custom gravity
-  Matter.Events.on(engine, 'beforeUpdate', applyCustomGravity);
-}
-
 function transitionLayout() {
   if (isMobile) {
     updateMobileLayout();
@@ -863,14 +847,6 @@ function updateDesktopLayout() {
   network.style.width = '100%';
   network.style.height = '100%';
   network.style.padding = '0';
-}
-
-function handleMobileNodeClick(event) {
-  event.preventDefault();
-  const clickedNode = event.currentTarget;
-  if (clickedNode && clickedNode.dataset.link) {
-    window.open(clickedNode.dataset.link);
-  }
 }
 
 function handleMobileTouchStart(event) {
