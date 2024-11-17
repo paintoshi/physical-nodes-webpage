@@ -3,7 +3,6 @@ const projectsDesktop = [
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 160, height: 180, team: false },
   { title: 'Estfor Kingdom', description: 'A play-to-earn medieval fantasy idle game', link: 'https://estfor.com', width: 280, height: 150, team: true },
   { title: 'Fantom Music', description: 'Music visualizer of the Fantom chain', link: 'https://music.paintoshi.dev', width: 210, height: 110, team: false },
-  { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 170, height: 170, team: false },
   { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130, team: true },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120, team: false },
 ];
@@ -13,7 +12,6 @@ const projectsMobile= [
   { title: 'Estfor Kingdom', description: 'A play-to-earn fantasy idle game', link: 'https://estfor.com', width: 0, height: 0, team: true },
   { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0, team: false, team: true },
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 0, height: 0, team: false },
-  { title: 'Auth.Cash', description: 'Web3 Account validator', link: 'https://auth.cash', width: 0, height: 0, team: false },
   { title: 'Fantom Music', description: 'Music visualizer of the Fantom chain', link: 'https://music.paintoshi.dev', width: 0, height: 0, team: false },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 0, height: 0, team: false }
 ];
@@ -901,8 +899,8 @@ function initializeDesktopLayout() {
   // Reapply initial velocities
   nodes.forEach(node => {
     Body.setVelocity(node, {
-      x: (Math.random() - 0.8) * 25,
-      y: (Math.random() - 0.8) * 10
+      x: (Math.random() - 0.8) * 200,
+      y: (Math.random() - 0.8) * 200
     });
   });
 
