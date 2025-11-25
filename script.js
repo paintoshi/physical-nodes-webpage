@@ -5,9 +5,9 @@ const projectsDesktop = [
   { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 210, height: 110, team: false },
   { title: 'Speed Checker', description: 'Compare the finality of different EVM networks', link: 'https://speedchecker.paintswap.io', width: 260, height: 130, team: true },
   { title: 'Sonic Invaders', description: 'Blockchain space invaders game', link: 'https://invaders.paintoshi.dev', width: 180, height: 140, team: false },
-  { title: 'Sonic Warp', description: 'Sonic network starfield visualizer', link: 'https://warp.paintoshi.dev', width: 210, height: 110, team: false },
+  { title: 'EVM Warp', description: 'EVM networks starfield visualizer', link: 'https://warp.paintoshi.dev', width: 210, height: 110, team: false },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 140, height: 120, team: false },
-  { title: 'Sonic Drops', description: 'Sonic network physics visualizer', link: 'https://drops.paintoshi.dev', width: 210, height: 110, team: false },
+  { title: 'EVM Drops', description: 'EVM networks physics visualizer', link: 'https://drops.paintoshi.dev', width: 210, height: 110, team: false },
 ];
 
 const projectsMobile= [
@@ -16,8 +16,8 @@ const projectsMobile= [
   { title: 'Speed Checker', description: 'Compare the finality of EVM networks', link: 'https://speedchecker.paintswap.io', width: 0, height: 0, team: false, team: true },
   { title: 'TinySwap', description: 'Simple crypto swap and bridge', link: 'https://tinyswap.app', width: 0, height: 0, team: false },
   { title: 'Sonic Music', description: 'Music visualizer of the Sonic chain', link: 'https://music.paintoshi.dev', width: 0, height: 0, team: false },
-  { title: 'Sonic Drops', description: 'Sonic network physics visualizer', link: 'https://drops.paintoshi.dev', width: 0, height: 0, team: false },
-  { title: 'Sonic Warp', description: 'Sonic network starfield visualizer', link: 'https://warp.paintoshi.dev', width: 0, height: 0, team: false },
+  { title: 'EVM Drops', description: 'EVM networks physics visualizer', link: 'https://drops.paintoshi.dev', width: 0, height: 0, team: false },
+  { title: 'EVM Warp', description: 'EVM networks starfield visualizer', link: 'https://warp.paintoshi.dev', width: 0, height: 0, team: false },
   { title: 'Sonic Invaders', description: 'Blockchain space invaders game', link: 'https://invaders.paintoshi.dev', width: 0, height: 0, team: false },
   { title: '$BRUSH', description: 'Latest price', link: 'https://brush.paintoshi.dev', width: 0, height: 0, team: false }
 ];
